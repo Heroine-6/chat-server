@@ -27,4 +27,15 @@ public class Message {
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
+
+    private Message(Long senderId, ChatRoom chatRoom, String content, Boolean isRead) {
+        this.senderId = senderId;
+        this.chatRoom = chatRoom;
+        this.content = content;
+        this.isRead = isRead;
+    }
+
+    public static Message create(Long senderId, ChatRoom chatRoom, String content) {
+        return new Message(senderId, chatRoom, content, false);
+    }
 }
