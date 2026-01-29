@@ -7,8 +7,11 @@ import com.example.chatserver.entity.ChatMessage;
 import com.example.chatserver.repository.ChatRoomRepository;
 import com.example.chatserver.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class ChatService {
         Long bidderId = request.getBidderId();
         Long senderId = request.getSenderId();
         Long propertyId = request.getPropertyId();
+        String content = request.getContent();
 
         // TODO: Custom Exception
         if (!request.getSenderId().equals(request.getBidderId())) {
@@ -35,16 +39,24 @@ public class ChatService {
             throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
         }
 
-        if (chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, sellerId).isPresent()) {
+        Optional<ChatRoom> existingRoom = chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, senderId);
+
+        if (existingRoom.isPresent()) {
             throw new IllegalStateException("이미 채팅방이 존재합니다.");
         }
 
-        ChatRoom room = ChatRoom.create(sellerId, bidderId, propertyId);
-        ChatRoom savedRoom = chatRoomRepository.save(room);
+        try {
+            ChatRoom room = ChatRoom.create(sellerId, bidderId, propertyId);
+            ChatRoom savedRoom = chatRoomRepository.save(room);
 
-        ChatMessage message = ChatMessage.create(senderId, savedRoom, request.getContent());
-        ChatMessage savedMessage = messageRepository.save(message);
+            ChatMessage message = ChatMessage.create(senderId, savedRoom, content);
+            messageRepository.save(message);
 
-        return FirstMessageResponse.from(savedRoom);
+            return FirstMessageResponse.from(savedRoom);
+
+        } catch (DataIntegrityViolationException e) {
+
+            throw new IllegalStateException("이미 생성되었습니다.");
+        }
     }
 }
