@@ -16,6 +16,7 @@ public class ChatController {
     private final ChatService chatService;
 
     // 첫 메시지 전송 + 방 생성
+    // TODO: 서버 연동 후 인증 추가
     @PostMapping("/v2")
     public ResponseEntity<FirstMessageResponse> firstMessage(@Valid @RequestBody FirstMessageRequest request) {
 

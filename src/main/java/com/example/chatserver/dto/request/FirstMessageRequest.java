@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 public class FirstMessageRequest {
 
+    // TODO: 서버 연동 후 content만 받도록 수정
     @NotNull
     private Long propertyId;
 
