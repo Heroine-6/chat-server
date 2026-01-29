@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "chat_rooms")
+@Table(name = "chat_rooms", uniqueConstraints = @UniqueConstraint(columnNames = {"property_id", "bidder_id", "seller_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends BaseEntity {
 
