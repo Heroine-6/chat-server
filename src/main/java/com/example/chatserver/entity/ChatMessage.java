@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(name = "messages")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Message {
+public class ChatMessage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,14 +28,14 @@ public class Message {
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
 
-    private Message(Long senderId, ChatRoom chatRoom, String content, Boolean isRead) {
+    private ChatMessage(Long senderId, ChatRoom chatRoom, String content, Boolean isRead) {
         this.senderId = senderId;
         this.chatRoom = chatRoom;
         this.content = content;
         this.isRead = isRead;
     }
 
-    public static Message create(Long senderId, ChatRoom chatRoom, String content) {
-        return new Message(senderId, chatRoom, content, false);
+    public static ChatMessage create(Long senderId, ChatRoom chatRoom, String content) {
+        return new ChatMessage(senderId, chatRoom, content, false);
     }
 }

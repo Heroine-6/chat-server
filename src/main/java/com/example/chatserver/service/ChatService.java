@@ -3,7 +3,7 @@ package com.example.chatserver.service;
 import com.example.chatserver.dto.request.FirstMessageRequest;
 import com.example.chatserver.dto.response.FirstMessageResponse;
 import com.example.chatserver.entity.ChatRoom;
-import com.example.chatserver.entity.Message;
+import com.example.chatserver.entity.ChatMessage;
 import com.example.chatserver.repository.ChatRoomRepository;
 import com.example.chatserver.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +42,8 @@ public class ChatService {
         ChatRoom room = ChatRoom.create(sellerId, bidderId, propertyId);
         ChatRoom savedRoom = chatRoomRepository.save(room);
 
-        Message message = Message.create(senderId, savedRoom, request.getContent());
-        Message savedMessage = messageRepository.save(message);
+        ChatMessage message = ChatMessage.create(senderId, savedRoom, request.getContent());
+        ChatMessage savedMessage = messageRepository.save(message);
 
         return FirstMessageResponse.from(savedRoom);
     }
