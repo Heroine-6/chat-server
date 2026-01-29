@@ -1,5 +1,6 @@
 package com.example.chatserver.service;
 
+import com.example.chatserver.dto.payload.ChatMessagePayload;
 import com.example.chatserver.dto.request.FirstMessageRequest;
 import com.example.chatserver.dto.response.FirstMessageResponse;
 import com.example.chatserver.entity.ChatRoom;
@@ -8,6 +9,7 @@ import com.example.chatserver.repository.ChatRoomRepository;
 import com.example.chatserver.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class ChatService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final MessageRepository messageRepository;
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
     // 첫 메시지 전송 + 방 생성
     @Transactional
@@ -50,7 +53,13 @@ public class ChatService {
             ChatRoom savedRoom = chatRoomRepository.save(room);
 
             ChatMessage message = ChatMessage.create(senderId, savedRoom, content);
-            messageRepository.save(message);
+            ChatMessage savedMessage = messageRepository.save(message);
+
+            simpMessagingTemplate.convertAndSendToUser(
+                    sellerId.toString(),
+                    "/queue/chat",
+                    ChatMessagePayload.from(savedMessage)
+            );
 
             return FirstMessageResponse.from(savedRoom);
 
