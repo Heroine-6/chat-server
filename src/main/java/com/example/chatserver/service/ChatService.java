@@ -3,6 +3,7 @@ package com.example.chatserver.service;
 import com.example.chatserver.dto.payload.ChatMessagePayload;
 import com.example.chatserver.dto.request.FirstMessageRequest;
 import com.example.chatserver.dto.response.FirstMessageResponse;
+import com.example.chatserver.dto.response.GetMyChatRoomResponse;
 import com.example.chatserver.entity.ChatRoom;
 import com.example.chatserver.entity.ChatMessage;
 import com.example.chatserver.repository.ChatRoomRepository;
@@ -13,6 +14,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -67,5 +70,19 @@ public class ChatService {
 
             throw new IllegalStateException("이미 생성되었습니다.");
         }
+    }
+
+    // 내 채팅방 조회
+    @Transactional(readOnly = true)
+    public List<GetMyChatRoomResponse> getRooms(Long userId) {
+
+        List<ChatRoom> rooms = chatRoomRepository.findBySellerIdOrBidderId(userId, userId);
+        List<GetMyChatRoomResponse> response = new ArrayList<>();
+
+        for (ChatRoom room : rooms) {
+            response.add(GetMyChatRoomResponse.from(room));
+        }
+
+        return response;
     }
 }
