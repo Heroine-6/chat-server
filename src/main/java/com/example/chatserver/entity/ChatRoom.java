@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "chat_rooms")
+@Table(name = "chat_rooms", uniqueConstraints = @UniqueConstraint(columnNames = {"property_id", "bidder_id", "seller_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends BaseEntity {
 
@@ -23,4 +23,14 @@ public class ChatRoom extends BaseEntity {
 
     @Column(name = "property_id", nullable = false)
     private Long propertyId;
+
+    private ChatRoom(Long sellerId, Long bidderId, Long propertyId) {
+        this.sellerId = sellerId;
+        this.bidderId = bidderId;
+        this.propertyId = propertyId;
+    }
+
+    public static ChatRoom create(Long sellerId, Long bidderId, Long propertyId) {
+        return new ChatRoom(sellerId, bidderId, propertyId);
+    }
 }
