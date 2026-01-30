@@ -2,12 +2,15 @@ package com.example.chatserver.service;
 
 import com.example.chatserver.dto.payload.ChatMessagePayload;
 import com.example.chatserver.dto.request.FirstMessageRequest;
+import com.example.chatserver.dto.request.OpenChatRoomRequest;
 import com.example.chatserver.dto.response.FirstMessageResponse;
 import com.example.chatserver.dto.response.GetMyChatRoomResponse;
+import com.example.chatserver.dto.response.OpenChatRoomResponse;
 import com.example.chatserver.entity.ChatRoom;
 import com.example.chatserver.entity.ChatMessage;
 import com.example.chatserver.repository.ChatRoomRepository;
 import com.example.chatserver.repository.MessageRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -25,6 +28,15 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
+
+    // 이미 존재하는 채팅방인지 검증
+    @Transactional
+    public Optional<OpenChatRoomResponse> openRoom(@Valid OpenChatRoomRequest request) {
+
+        return chatRoomRepository
+                .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), request.getBidderId(), request.getSellerId())
+                .map(OpenChatRoomResponse::from);
+    }
 
     // 첫 메시지 전송 + 방 생성
     @Transactional

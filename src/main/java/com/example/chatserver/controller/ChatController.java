@@ -1,8 +1,10 @@
 package com.example.chatserver.controller;
 
 import com.example.chatserver.dto.request.FirstMessageRequest;
+import com.example.chatserver.dto.request.OpenChatRoomRequest;
 import com.example.chatserver.dto.response.FirstMessageResponse;
 import com.example.chatserver.dto.response.GetMyChatRoomResponse;
+import com.example.chatserver.dto.response.OpenChatRoomResponse;
 import com.example.chatserver.service.ChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,15 @@ import java.util.List;
 public class ChatController {
 
     private final ChatService chatService;
+
+    // 이미 존재하는 채팅방인지 검증
+    @PostMapping("/v2/open")
+    public ResponseEntity<OpenChatRoomResponse> openRoom(@Valid @RequestBody OpenChatRoomRequest request) {
+
+        return chatService.openRoom(request)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
 
     // 첫 메시지 전송 + 방 생성
     // TODO: 서버 연동 후 인증 추가
