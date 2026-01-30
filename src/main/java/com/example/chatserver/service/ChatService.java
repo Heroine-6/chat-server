@@ -2,13 +2,19 @@ package com.example.chatserver.service;
 
 import com.example.chatserver.dto.payload.ChatMessagePayload;
 import com.example.chatserver.dto.request.FirstMessageRequest;
+import com.example.chatserver.dto.request.OpenChatRoomRequest;
 import com.example.chatserver.dto.response.FirstMessageResponse;
+import com.example.chatserver.dto.response.GetMyChatRoomResponse;
+import com.example.chatserver.dto.response.OpenChatRoomResponse;
 import com.example.chatserver.entity.ChatRoom;
 import com.example.chatserver.entity.ChatMessage;
 import com.example.chatserver.repository.ChatRoomRepository;
 import com.example.chatserver.repository.MessageRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +28,15 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
+
+    // 이미 존재하는 채팅방인지 검증
+    @Transactional
+    public Optional<OpenChatRoomResponse> openRoom(@Valid OpenChatRoomRequest request) {
+
+        return chatRoomRepository
+                .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), request.getBidderId(), request.getSellerId())
+                .map(OpenChatRoomResponse::from);
+    }
 
     // 첫 메시지 전송 + 방 생성
     @Transactional
@@ -67,5 +82,14 @@ public class ChatService {
 
             throw new IllegalStateException("이미 생성되었습니다.");
         }
+    }
+
+    // 내 채팅방 조회
+    @Transactional(readOnly = true)
+    public Slice<GetMyChatRoomResponse> getRooms(Long userId, Pageable pageable) {
+
+        return chatRoomRepository
+                .findBySellerIdOrBidderIdOrderByIdDesc(userId, userId, pageable)
+                .map(GetMyChatRoomResponse::from);
     }
 }
