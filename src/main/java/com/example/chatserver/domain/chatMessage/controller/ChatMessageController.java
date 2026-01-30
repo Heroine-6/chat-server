@@ -3,11 +3,15 @@ package com.example.chatserver.domain.chatMessage.controller;
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.request.SendMessageRequest;
+import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -44,5 +48,17 @@ public class ChatMessageController {
                 "/queue/chat",
                 ChatMessagePayload.from(savedMessage)
         );
+    }
+
+    // 채팅 메시지 조회
+    @GetMapping("/rooms/{roomId}/messages/{userId}")
+    public ResponseEntity<Slice<GetMessageResponse>> getMessages(
+            @PathVariable Long roomId,
+            @PathVariable Long userId,
+            @PageableDefault(size = 30) Pageable pageable) {
+
+        Slice<GetMessageResponse> response = chatMessageService.getMessages(roomId, userId, pageable);
+
+        return ResponseEntity.ok(response);
     }
 }

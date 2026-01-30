@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(name = "messages")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ChatMessage {
+public class ChatMessage extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
