@@ -1,6 +1,5 @@
 package com.example.chatserver.dto.response;
 
-import com.example.chatserver.entity.ChatMessage;
 import com.example.chatserver.entity.ChatRoom;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
