@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>WebSocket Test (SockJS + STOMP)</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        input { width: 220px; margin: 4px 0; }
+        button { margin-right: 6px; }
+        pre { background: #f6f6f6; padding: 10px; height: 260px; overflow: auto; }
+        .row { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+<h2>WebSocket Test</h2>
+
+<div class="row">
+    <div>roomId</div>
+    <input id="roomId" value="1" />
+</div>
+
+<div class="row">
+    <div>senderId (CONNECT userId 헤더로도 사용됨)</div>
+    <input id="senderId" value="2" />
+</div>
+
+<div class="row">
+    <div>content</div>
+    <input id="content" placeholder="message..." />
+</div>
+
+<div class="row">
+    <button onclick="connect()">CONNECT</button>
+    <button onclick="subscribeUserQueue()">SUBSCRIBE (/user/queue/chat)</button>
+    <button onclick="sendMsg()">SEND (/app/message)</button>
+    <button onclick="disconnect()">DISCONNECT</button>
+</div>
+
+<pre id="log"></pre>
+
+<script>
+    let stompClient = null;
+
+    function log(msg) {
+        const el = document.getElementById("log");
+        el.textContent += msg + "\n";
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function connect() {
+        const senderId = document.getElementById("senderId").value.trim();
+        if (!senderId) {
+            log("❌ senderId를 입력해줘");
+            return;
+        }
+
+        // ✅ SockJS endpoint (서버: registry.addEndpoint("/ws").withSockJS())
+        const socket = new SockJS("/ws");
+
+        stompClient = Stomp.over(socket);
+
+        // (선택) 로그 너무 많으면 주석
+        stompClient.debug = (str) => console.log(str);
+
+        // ✅ TestUserChannelInterceptor가 CONNECT 헤더 userId로 Principal 세팅함
+        const headers = { userId: senderId };
+
+        stompClient.connect(
+            headers,
+            (frame) => log("✅ CONNECTED: " + frame),
+            (err) => log("❌ CONNECT ERROR: " + err)
+        );
+    }
+
+    function subscribeUserQueue() {
+        if (!stompClient || !stompClient.connected) {
+            log("❌ 먼저 CONNECT 해줘");
+            return;
+        }
+
+        // ✅ user destination 구독
+        // 서버가 convertAndSendToUser("3", "/queue/chat", ...) 하면
+        // 클라는 /user/queue/chat 로 받아야 함
+        stompClient.subscribe("/user/queue/chat", (message) => {
+            log("📩 RECV: " + message.body);
+        });
+
+        log("✅ SUBSCRIBED: /user/queue/chat");
+    }
+
+    function sendMsg() {
+        if (!stompClient || !stompClient.connected) {
+            log("❌ 먼저 CONNECT 해줘");
+            return;
+        }
+
+        const roomId = Number(document.getElementById("roomId").value);
+        const senderId = Number(document.getElementById("senderId").value);
+        const content = document.getElementById("content").value;
+
+        if (!roomId || !senderId || !content) {
+            log("❌ roomId, senderId, content를 모두 입력해줘");
+            return;
+        }
+
+        const payload = { roomId, senderId, content };
+
+        // ✅ 서버 @MessageMapping("/message") 라면 클라는 /app/message 로 SEND
+        stompClient.send("/app/message", {}, JSON.stringify(payload));
+
+        log("➡️ SENT: " + JSON.stringify(payload));
+    }
+
+    function disconnect() {
+        if (stompClient && stompClient.connected) {
+            stompClient.disconnect(() => log("✅ DISCONNECTED"));
+        } else {
+            log("ℹ️ 이미 disconnected 상태");
+        }
+    }
+</script>
+</body>
+</html>
