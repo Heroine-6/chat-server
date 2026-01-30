@@ -10,14 +10,14 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/chats")
+@RequestMapping("/api/v2/chats/messages")
 public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
 
     // 첫 메시지 전송 + 방 생성
     // TODO: 서버 연동 후 인증 추가
-    @PostMapping("/v2")
+    @PostMapping
     public ResponseEntity<FirstMessageResponse> firstMessage(@Valid @RequestBody FirstMessageRequest request) {
 
         FirstMessageResponse response = chatMessageService.firstMessage(request);

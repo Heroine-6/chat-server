@@ -14,13 +14,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/chats")
+@RequestMapping("/api/v2/chats/rooms")
 public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
 
     // 이미 존재하는 채팅방인지 검증
-    @PostMapping("/v2/open")
+    @PostMapping("/open")
     public ResponseEntity<OpenChatRoomResponse> openRoom(@Valid @RequestBody OpenChatRoomRequest request) {
 
         return chatRoomService.openRoom(request)
@@ -30,7 +30,7 @@ public class ChatRoomController {
 
     // 내 채팅방 조회
     // TODO: 서버 연동 후 인증 추가
-    @GetMapping("/v2/{userId}")
+    @GetMapping("/{userId}")
     public ResponseEntity<Slice<GetMyChatRoomResponse>> getRooms(@PathVariable Long userId, @PageableDefault(size = 20) Pageable pageable) {
 
         Slice<GetMyChatRoomResponse> response = chatRoomService.getRooms(userId, pageable);
