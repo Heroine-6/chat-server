@@ -8,6 +8,9 @@ import com.example.chatserver.dto.response.OpenChatRoomResponse;
 import com.example.chatserver.service.ChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,9 +45,9 @@ public class ChatController {
     // 내 채팅방 조회
     // TODO: 서버 연동 후 인증 추가
     @GetMapping("/v2/{userId}")
-    public ResponseEntity<List<GetMyChatRoomResponse>> getRooms(@PathVariable Long userId) {
+    public ResponseEntity<Slice<GetMyChatRoomResponse>> getRooms(@PathVariable Long userId, @PageableDefault(size = 20) Pageable pageable) {
 
-        List<GetMyChatRoomResponse> response = chatService.getRooms(userId);
+        Slice<GetMyChatRoomResponse> response = chatService.getRooms(userId, pageable);
 
         return ResponseEntity.ok(response);
     }

@@ -13,6 +13,8 @@ import com.example.chatserver.repository.MessageRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,15 +88,10 @@ public class ChatService {
 
     // 내 채팅방 조회
     @Transactional(readOnly = true)
-    public List<GetMyChatRoomResponse> getRooms(Long userId) {
+    public Slice<GetMyChatRoomResponse> getRooms(Long userId, Pageable pageable) {
 
-        List<ChatRoom> rooms = chatRoomRepository.findBySellerIdOrBidderId(userId, userId);
-        List<GetMyChatRoomResponse> response = new ArrayList<>();
-
-        for (ChatRoom room : rooms) {
-            response.add(GetMyChatRoomResponse.from(room));
-        }
-
-        return response;
+        return chatRoomRepository
+                .findBySellerIdOrBidderIdOrderByIdDesc(userId, userId, pageable)
+                .map(GetMyChatRoomResponse::from);
     }
 }
