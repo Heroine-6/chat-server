@@ -1,8 +1,8 @@
 package com.example.chatserver.domain.chatMessage.controller;
 
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
-import com.example.chatserver.domain.chatMessage.dto.request.FirstMessageRequest;
-import com.example.chatserver.domain.chatMessage.dto.response.FirstMessageResponse;
+import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
+import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +18,9 @@ public class ChatMessageController {
     // 첫 메시지 전송 + 방 생성
     // TODO: 서버 연동 후 인증 추가
     @PostMapping
-    public ResponseEntity<FirstMessageResponse> firstMessage(@Valid @RequestBody FirstMessageRequest request) {
+    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@Valid @RequestBody SendFirstMessageRequest request) {
 
-        FirstMessageResponse response = chatMessageService.firstMessage(request);
+        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(request);
 
         return ResponseEntity.ok(response);
     }

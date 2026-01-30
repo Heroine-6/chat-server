@@ -6,11 +6,11 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class OpenChatRoomResponse {
+public class FindRoomResponse {
 
     private Long roomId;
 
-    public static OpenChatRoomResponse from(ChatRoom chatRoom) {
-        return new OpenChatRoomResponse(chatRoom.getId());
+    public static FindRoomResponse from(ChatRoom chatRoom) {
+        return new FindRoomResponse(chatRoom.getId());
     }
 }

@@ -1,9 +1,9 @@
 package com.example.chatserver.domain.chatRoom.controller;
 
 import com.example.chatserver.domain.chatRoom.service.ChatRoomService;
-import com.example.chatserver.domain.chatRoom.dto.request.OpenChatRoomRequest;
-import com.example.chatserver.domain.chatRoom.dto.response.GetMyChatRoomResponse;
-import com.example.chatserver.domain.chatRoom.dto.response.OpenChatRoomResponse;
+import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
+import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
+import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +21,9 @@ public class ChatRoomController {
 
     // 이미 존재하는 채팅방인지 검증
     @PostMapping("/open")
-    public ResponseEntity<OpenChatRoomResponse> openRoom(@Valid @RequestBody OpenChatRoomRequest request) {
+    public ResponseEntity<FindRoomResponse> findRoom(@Valid @RequestBody FindRoomRequest request) {
 
-        return chatRoomService.openRoom(request)
+        return chatRoomService.findRoom(request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
@@ -31,9 +31,9 @@ public class ChatRoomController {
     // 내 채팅방 조회
     // TODO: 서버 연동 후 인증 추가
     @GetMapping("/{userId}")
-    public ResponseEntity<Slice<GetMyChatRoomResponse>> getRooms(@PathVariable Long userId, @PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<Slice<GetMyRoomsResponse>> getMyRooms(@PathVariable Long userId, @PageableDefault(size = 20) Pageable pageable) {
 
-        Slice<GetMyChatRoomResponse> response = chatRoomService.getRooms(userId, pageable);
+        Slice<GetMyRoomsResponse> response = chatRoomService.getMyRooms(userId, pageable);
 
         return ResponseEntity.ok(response);
     }

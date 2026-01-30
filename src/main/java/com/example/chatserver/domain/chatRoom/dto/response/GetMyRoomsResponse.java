@@ -8,13 +8,13 @@ import java.time.LocalDateTime;
 
 @Getter
 @AllArgsConstructor
-public class GetMyChatRoomResponse {
+public class GetMyRoomsResponse {
 
     // TODO: 채팅 제목, 최근 채팅 전송 시간 추가
     private Long roomId;
     private LocalDateTime createdAt;
 
-    public static GetMyChatRoomResponse from(ChatRoom room) {
-        return new GetMyChatRoomResponse(room.getId(), room.getCreatedAt());
+    public static GetMyRoomsResponse from(ChatRoom room) {
+        return new GetMyRoomsResponse(room.getId(), room.getCreatedAt());
     }
 }

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
-public class FirstMessageRequest {
+public class SendFirstMessageRequest {
 
     // TODO: 서버 연동 후 content만 받도록 수정
     @NotNull

@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
-public class OpenChatRoomRequest {
+public class FindRoomRequest {
 
     @NotNull
     private Long bidderId;

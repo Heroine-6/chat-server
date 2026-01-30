@@ -1,12 +1,12 @@
 package com.example.chatserver.domain.chatMessage.service;
 
 import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
-import com.example.chatserver.domain.chatMessage.dto.request.FirstMessageRequest;
-import com.example.chatserver.domain.chatMessage.dto.response.FirstMessageResponse;
+import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
+import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.chatMessage.repository.MessageRepository;
+import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -20,12 +20,12 @@ import java.util.Optional;
 public class ChatMessageService {
 
     private final ChatRoomRepository chatRoomRepository;
-    private final MessageRepository messageRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     // 첫 메시지 전송 + 방 생성
     @Transactional
-    public FirstMessageResponse firstMessage(FirstMessageRequest request) {
+    public SendFirstMessageResponse sendFirstMessage(SendFirstMessageRequest request) {
 
         Long sellerId = request.getSellerId();
         Long bidderId = request.getBidderId();
@@ -53,7 +53,7 @@ public class ChatMessageService {
             ChatRoom savedRoom = chatRoomRepository.save(room);
 
             ChatMessage message = ChatMessage.create(senderId, savedRoom, content);
-            ChatMessage savedMessage = messageRepository.save(message);
+            ChatMessage savedMessage = chatMessageRepository.save(message);
 
             simpMessagingTemplate.convertAndSendToUser(
                     sellerId.toString(),
@@ -61,7 +61,7 @@ public class ChatMessageService {
                     ChatMessagePayload.from(savedMessage)
             );
 
-            return FirstMessageResponse.from(savedRoom);
+            return SendFirstMessageResponse.from(savedRoom);
 
         } catch (DataIntegrityViolationException e) {
 

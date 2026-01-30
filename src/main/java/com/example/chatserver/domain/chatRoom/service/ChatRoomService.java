@@ -1,10 +1,10 @@
 package com.example.chatserver.domain.chatRoom.service;
 
-import com.example.chatserver.domain.chatRoom.dto.request.OpenChatRoomRequest;
-import com.example.chatserver.domain.chatRoom.dto.response.GetMyChatRoomResponse;
-import com.example.chatserver.domain.chatRoom.dto.response.OpenChatRoomResponse;
+import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
+import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
+import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.chatMessage.repository.MessageRepository;
+import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -20,24 +20,24 @@ import java.util.Optional;
 public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
-    private final MessageRepository messageRepository;
+    private final ChatMessageRepository messageRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     // 이미 존재하는 채팅방인지 검증
     @Transactional
-    public Optional<OpenChatRoomResponse> openRoom(@Valid OpenChatRoomRequest request) {
+    public Optional<FindRoomResponse> findRoom(@Valid FindRoomRequest request) {
 
         return chatRoomRepository
                 .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), request.getBidderId(), request.getSellerId())
-                .map(OpenChatRoomResponse::from);
+                .map(FindRoomResponse::from);
     }
 
     // 내 채팅방 조회
     @Transactional(readOnly = true)
-    public Slice<GetMyChatRoomResponse> getRooms(Long userId, Pageable pageable) {
+    public Slice<GetMyRoomsResponse> getMyRooms(Long userId, Pageable pageable) {
 
         return chatRoomRepository
                 .findBySellerIdOrBidderIdOrderByIdDesc(userId, userId, pageable)
-                .map(GetMyChatRoomResponse::from);
+                .map(GetMyRoomsResponse::from);
     }
 }

@@ -8,12 +8,12 @@ import java.time.LocalDateTime;
 
 @Getter
 @AllArgsConstructor
-public class FirstMessageResponse {
+public class SendFirstMessageResponse {
 
     private Long roomId;
     private LocalDateTime createdAt;
 
-    public static FirstMessageResponse from(ChatRoom chatRoom) {
-        return new FirstMessageResponse(chatRoom.getId(), chatRoom.getCreatedAt());
+    public static SendFirstMessageResponse from(ChatRoom chatRoom) {
+        return new SendFirstMessageResponse(chatRoom.getId(), chatRoom.getCreatedAt());
     }
 }
