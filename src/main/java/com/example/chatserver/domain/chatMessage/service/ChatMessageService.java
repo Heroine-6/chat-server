@@ -1,0 +1,71 @@
+package com.example.chatserver.domain.chatMessage.service;
+
+import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
+import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
+import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
+import com.example.chatserver.common.entity.ChatRoom;
+import com.example.chatserver.common.entity.ChatMessage;
+import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
+import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class ChatMessageService {
+
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final SimpMessagingTemplate simpMessagingTemplate;
+
+    // 첫 메시지 전송 + 방 생성
+    @Transactional
+    public SendFirstMessageResponse sendFirstMessage(SendFirstMessageRequest request) {
+
+        Long sellerId = request.getSellerId();
+        Long bidderId = request.getBidderId();
+        Long senderId = request.getSenderId();
+        Long propertyId = request.getPropertyId();
+        String content = request.getContent();
+
+        // TODO: Custom Exception
+        if (!request.getSenderId().equals(request.getBidderId())) {
+            throw new IllegalStateException("첫 메시지는 입찰자만 전송할 수 있습니다.");
+        }
+
+        if (sellerId.equals(bidderId)) {
+            throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
+        }
+
+        Optional<ChatRoom> existingRoom = chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, senderId);
+
+        if (existingRoom.isPresent()) {
+            throw new IllegalStateException("이미 채팅방이 존재합니다.");
+        }
+
+        try {
+            ChatRoom room = ChatRoom.create(sellerId, bidderId, propertyId);
+            ChatRoom savedRoom = chatRoomRepository.save(room);
+
+            ChatMessage message = ChatMessage.create(senderId, savedRoom, content);
+            ChatMessage savedMessage = chatMessageRepository.save(message);
+
+            simpMessagingTemplate.convertAndSendToUser(
+                    sellerId.toString(),
+                    "/queue/chat",
+                    ChatMessagePayload.from(savedMessage)
+            );
+
+            return SendFirstMessageResponse.from(savedRoom);
+
+        } catch (DataIntegrityViolationException e) {
+
+            throw new IllegalStateException("이미 생성되었습니다.");
+        }
+    }
+}
