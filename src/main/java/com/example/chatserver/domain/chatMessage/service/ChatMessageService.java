@@ -2,6 +2,7 @@ package com.example.chatserver.domain.chatMessage.service;
 
 import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
+import com.example.chatserver.domain.chatMessage.dto.request.SendMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ChatMessage;
@@ -68,4 +69,31 @@ public class ChatMessageService {
             throw new IllegalStateException("이미 생성되었습니다.");
         }
     }
+
+    @Transactional
+    public ChatMessage sendMessage(SendMessageRequest request) {
+
+        ChatRoom room = chatRoomRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new IllegalStateException("채팅방이 존재하지 않습니다."));
+
+        Long senderId = request.getSenderId();
+
+        if (!senderId.equals(room.getSellerId()) && !senderId.equals(room.getBidderId())) {
+            throw new IllegalStateException("채팅방 참여자만 메시지를 보낼 수 있습니다.");
+        }
+
+        ChatMessage message = ChatMessage.create(senderId, room, request.getContent());
+        return chatMessageRepository.save(message);
+    }
+
+    public Long getReceiverId(ChatMessage message) {
+        ChatRoom room = message.getChatRoom();
+        Long senderId = message.getSenderId();
+
+        if (senderId.equals(room.getSellerId())) {
+            return room.getBidderId();
+        }
+        return room.getSellerId();
+    }
+
 }
