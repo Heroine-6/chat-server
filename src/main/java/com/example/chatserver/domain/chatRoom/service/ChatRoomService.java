@@ -37,7 +37,7 @@ public class ChatRoomService {
     public Slice<GetMyRoomsResponse> getMyRooms(Long userId, Pageable pageable) {
 
         return chatRoomRepository
-                .findBySellerIdOrBidderIdOrderByIdDesc(userId, userId, pageable)
+                .findBySellerIdOrBidderIdOrderByLastMessageAtDesc(userId, userId, pageable)
                 .map(GetMyRoomsResponse::from);
     }
 }

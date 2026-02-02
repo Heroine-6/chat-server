@@ -46,7 +46,7 @@ public class ChatMessageService {
             throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
         }
 
-        Optional<ChatRoom> existingRoom = chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, senderId);
+        Optional<ChatRoom> existingRoom = chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, sellerId);
 
         if (existingRoom.isPresent()) {
             throw new IllegalStateException("이미 채팅방이 존재합니다.");
@@ -58,6 +58,8 @@ public class ChatMessageService {
 
             ChatMessage message = ChatMessage.create(senderId, savedRoom, content);
             ChatMessage savedMessage = chatMessageRepository.save(message);
+
+            savedRoom.updateLastMessageAt(savedMessage.getCreatedAt());
 
             simpMessagingTemplate.convertAndSendToUser(
                     sellerId.toString(),
@@ -87,7 +89,11 @@ public class ChatMessageService {
         }
 
         ChatMessage message = ChatMessage.create(senderId, room, request.getContent());
-        return chatMessageRepository.save(message);
+        ChatMessage savedMessage = chatMessageRepository.save(message);
+
+        room.updateLastMessageAt(savedMessage.getCreatedAt());
+
+        return savedMessage;
     }
 
     public Long getReceiverId(ChatMessage message) {

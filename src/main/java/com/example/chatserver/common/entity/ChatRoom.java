@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Table(name = "chat_rooms", uniqueConstraints = @UniqueConstraint(columnNames = {"property_id", "bidder_id", "seller_id"}))
@@ -23,6 +25,13 @@ public class ChatRoom extends BaseEntity {
 
     @Column(name = "property_id", nullable = false)
     private Long propertyId;
+
+    @Column(name = "last_message_at")
+    private LocalDateTime lastMessageAt;
+
+    public void updateLastMessageAt(LocalDateTime time) {
+        this.lastMessageAt = time;
+    }
 
     private ChatRoom(Long sellerId, Long bidderId, Long propertyId) {
         this.sellerId = sellerId;
