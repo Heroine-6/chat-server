@@ -1,6 +1,5 @@
 package com.example.chatserver.domain.readState.dto.payload;
 
-import com.example.chatserver.common.entity.ReadState;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
