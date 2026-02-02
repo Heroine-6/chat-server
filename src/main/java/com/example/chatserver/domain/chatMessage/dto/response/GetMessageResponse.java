@@ -11,12 +11,14 @@ import java.time.LocalDateTime;
 public class GetMessageResponse {
 
     private Long messageId;
+    private Long senderId;
     private String content;
     private LocalDateTime createdAt;
 
     public static GetMessageResponse from(ChatMessage message) {
         return new GetMessageResponse(
                 message.getId(),
+                message.getSenderId(),
                 message.getContent(),
                 message.getCreatedAt()
         );

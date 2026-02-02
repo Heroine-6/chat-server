@@ -1,5 +1,6 @@
 package com.example.chatserver.domain.chatMessage.service;
 
+import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.request.SendMessageRequest;
@@ -9,6 +10,7 @@ import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
+import com.example.chatserver.domain.readState.repository.ReadStateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,7 @@ public class ChatMessageService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ReadStateRepository readStateRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     // 첫 메시지 전송 + 방 생성
@@ -61,6 +64,12 @@ public class ChatMessageService {
 
             savedRoom.updateLastMessageAt(savedMessage.getCreatedAt());
 
+            ReadState sellerState = readStateRepository.save(ReadState.create(savedRoom, sellerId));
+            sellerState.increaseUnreadCount();
+
+            ReadState bidderState = readStateRepository.save(ReadState.create(savedRoom, bidderId));
+            bidderState.markRead(savedMessage.getId());
+
             simpMessagingTemplate.convertAndSendToUser(
                     sellerId.toString(),
                     "/queue/chat",
@@ -92,6 +101,16 @@ public class ChatMessageService {
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
         room.updateLastMessageAt(savedMessage.getCreatedAt());
+
+        Long receiverId = senderId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
+
+        ReadState receiverState = readStateRepository.findByChatRoomAndUserId(room, receiverId)
+                .orElseGet(() -> readStateRepository.save(ReadState.create(room, receiverId)));
+        receiverState.increaseUnreadCount();
+
+        ReadState senderState = readStateRepository.findByChatRoomAndUserId(room, senderId)
+                .orElseGet(() -> readStateRepository.save(ReadState.create(room, senderId)));
+        senderState.markRead(savedMessage.getId());
 
         return savedMessage;
     }
