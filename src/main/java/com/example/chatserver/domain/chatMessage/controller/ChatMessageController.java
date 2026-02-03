@@ -1,16 +1,10 @@
 package com.example.chatserver.domain.chatMessage.controller;
 
-import com.example.chatserver.common.entity.ChatMessage;
-import com.example.chatserver.common.entity.ChatRoom;
-import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
-import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.readState.dto.payload.ReadStatePayload;
-import com.example.chatserver.domain.readState.dto.request.MarkReadRequest;
 import com.example.chatserver.domain.readState.service.ReadStateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +13,8 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
-
-import java.security.Principal;
 
 @RestController
 @RequiredArgsConstructor
