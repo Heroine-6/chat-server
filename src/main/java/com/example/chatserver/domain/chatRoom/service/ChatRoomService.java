@@ -7,7 +7,6 @@ import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
 import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
