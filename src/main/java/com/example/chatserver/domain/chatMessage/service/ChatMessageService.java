@@ -129,7 +129,7 @@ public class ChatMessageService {
                 .orElseThrow(() -> new IllegalStateException("채팅방이 존재하지 않습니다."));
 
         if (!userId.equals(room.getSellerId()) && !userId.equals(room.getBidderId())) {
-            throw new IllegalStateException("채팅방 참여자만 메시지를 보낼 수 있습니다.");
+            throw new IllegalStateException("채팅방 참여자만 메시지를 조회할 수 있습니다.");
         }
 
         return chatMessageRepository
