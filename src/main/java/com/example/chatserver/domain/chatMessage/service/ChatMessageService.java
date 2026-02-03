@@ -119,16 +119,6 @@ public class ChatMessageService {
         return savedMessage;
     }
 
-    public Long getReceiverId(ChatMessage message) {
-        ChatRoom room = message.getChatRoom();
-        Long senderId = message.getSenderId();
-
-        if (senderId.equals(room.getSellerId())) {
-            return room.getBidderId();
-        }
-        return room.getSellerId();
-    }
-
     /**
      * 채팅 메시지 조회
      */
