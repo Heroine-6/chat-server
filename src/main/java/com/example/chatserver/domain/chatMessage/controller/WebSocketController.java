@@ -48,6 +48,7 @@ public class WebSocketController {
 
     /**
      * 메시지 읽음
+     * TODO: 유저 인증 수정 (지금은 테스트)
      */
     @MessageMapping("/read")
     public void markRead(MarkReadPayload request, Principal principal) {
