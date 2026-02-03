@@ -4,8 +4,6 @@ import com.example.chatserver.common.entity.ChatRoom;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
-
 @Getter
 @AllArgsConstructor
 public class SendFirstMessageResponse {
