@@ -3,6 +3,7 @@ package com.example.chatserver.domain.chatMessage.service;
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;
+import com.example.chatserver.domain.chatMessage.dto.result.MarkReadResult;
 import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
@@ -20,7 +21,7 @@ public class ReadStateService {
 
     // 읽음 처리
     @Transactional
-    public Long markReadAll(Long roomId, Long userId) {
+    public MarkReadResult markReadAll(Long roomId, Long userId) {
 
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalStateException("채팅방이 존재하지 않습니다."));
@@ -38,6 +39,8 @@ public class ReadStateService {
 
         state.markRead(lastMessageId);
 
-        return lastMessageId;
+        Long otherId = userId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
+
+        return new MarkReadResult(otherId, lastMessageId);
     }
 }
