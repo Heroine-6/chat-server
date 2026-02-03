@@ -1,9 +1,9 @@
 package com.example.chatserver.domain.chatMessage.service;
 
 import com.example.chatserver.common.entity.ReadState;
-import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
+import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
+import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
-import com.example.chatserver.domain.chatMessage.dto.request.SendMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
 import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import com.example.chatserver.common.entity.ChatRoom;
@@ -71,7 +71,7 @@ public class ChatMessageService {
             simpMessagingTemplate.convertAndSendToUser(
                     sellerId.toString(),
                     "/queue/chat",
-                    ChatMessagePayload.from(savedMessage)
+                    GetMessagePayload.from(savedMessage)
             );
 
             return SendFirstMessageResponse.from(savedRoom);
@@ -86,18 +86,22 @@ public class ChatMessageService {
      * 메시지 전송
      */
     @Transactional
-    public ChatMessage sendMessage(SendMessageRequest request) {
+    public ChatMessage sendMessage(Long senderId, SendMessagePayload payload) {
 
-        ChatRoom room = chatRoomRepository.findById(request.getRoomId())
+        ChatRoom room = chatRoomRepository.findById(payload.getRoomId())
                 .orElseThrow(() -> new IllegalStateException("채팅방이 존재하지 않습니다."));
-
-        Long senderId = request.getSenderId();
 
         if (!senderId.equals(room.getSellerId()) && !senderId.equals(room.getBidderId())) {
             throw new IllegalStateException("채팅방 참여자만 메시지를 보낼 수 있습니다.");
         }
 
-        ChatMessage message = ChatMessage.create(senderId, room, request.getContent());
+        String content = payload.getContent();
+
+        if (content == null || content.isBlank()) {
+            throw new IllegalStateException("메시지를 입력해주세요.");
+        }
+
+        ChatMessage message = ChatMessage.create(senderId, room, content);
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
         room.updateLastMessageAt(savedMessage.getCreatedAt());

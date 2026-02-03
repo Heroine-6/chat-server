@@ -2,8 +2,8 @@ package com.example.chatserver.domain.chatMessage.controller;
 
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.common.entity.ChatRoom;
-import com.example.chatserver.domain.chatMessage.dto.payload.ChatMessagePayload;
-import com.example.chatserver.domain.chatMessage.dto.request.SendMessageRequest;
+import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
+import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
@@ -21,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
 
 @RestController
 @RequiredArgsConstructor
@@ -46,25 +48,22 @@ public class ChatMessageController {
 
     /**
      * 메시지 전송
+     * TODO: 유저 인증 수정 (지금은 테스트)
      */
     @MessageMapping("/message")
-    public void sendMessage(SendMessageRequest request) {
+    public void sendMessage(SendMessagePayload payload, Principal principal) {
 
-        ChatMessage savedMessage = chatMessageService.sendMessage(request);
+        Long senderId = Long.valueOf(principal.getName());
 
-        Long receiverId = chatMessageService.getReceiverId(savedMessage);
+        ChatMessage savedMessage = chatMessageService.sendMessage(senderId, payload);
+        ChatRoom room = savedMessage.getChatRoom();
 
-        messagingTemplate.convertAndSendToUser(
-                receiverId.toString(),
-                "/queue/chat",
-                ChatMessagePayload.from(savedMessage)
-        );
+        Long receiverId = senderId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
 
-        messagingTemplate.convertAndSendToUser(
-                request.getSenderId().toString(),
-                "/queue/chat",
-                ChatMessagePayload.from(savedMessage)
-        );
+        GetMessagePayload out = GetMessagePayload.from(savedMessage);
+
+        messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/chat", out);
+        messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/chat", out);
     }
 
     /**
