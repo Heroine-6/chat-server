@@ -5,7 +5,7 @@ import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.readState.service.ReadStateService;
+import com.example.chatserver.domain.chatMessage.service.ReadStateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;

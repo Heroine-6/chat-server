@@ -1,11 +1,11 @@
-package com.example.chatserver.domain.readState.service;
+package com.example.chatserver.domain.chatMessage.service;
 
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.readState.repository.ReadStateRepository;
+import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

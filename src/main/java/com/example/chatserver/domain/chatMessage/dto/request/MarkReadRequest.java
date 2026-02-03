@@ -1,4 +1,4 @@
-package com.example.chatserver.domain.readState.dto.request;
+package com.example.chatserver.domain.chatMessage.dto.request;
 
 import lombok.Getter;
 

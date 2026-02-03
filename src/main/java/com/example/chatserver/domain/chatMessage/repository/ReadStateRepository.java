@@ -1,4 +1,4 @@
-package com.example.chatserver.domain.readState.repository;
+package com.example.chatserver.domain.chatMessage.repository;
 
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;

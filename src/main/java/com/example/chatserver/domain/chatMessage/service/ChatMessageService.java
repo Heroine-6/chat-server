@@ -10,7 +10,7 @@ import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
-import com.example.chatserver.domain.readState.repository.ReadStateRepository;
+import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
