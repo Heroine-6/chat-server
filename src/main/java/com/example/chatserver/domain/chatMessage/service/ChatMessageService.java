@@ -30,21 +30,17 @@ public class ChatMessageService {
     private final ReadStateRepository readStateRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
-    // 첫 메시지 전송 + 방 생성
+    /**
+     * 첫 메시지 전송 + 방 생성
+     */
     @Transactional
-    public SendFirstMessageResponse sendFirstMessage(SendFirstMessageRequest request) {
+    public SendFirstMessageResponse sendFirstMessage(Long bidderId, SendFirstMessageRequest request) {
 
         Long sellerId = request.getSellerId();
-        Long bidderId = request.getBidderId();
-        Long senderId = request.getSenderId();
         Long propertyId = request.getPropertyId();
         String content = request.getContent();
 
         // TODO: Custom Exception
-        if (!request.getSenderId().equals(request.getBidderId())) {
-            throw new IllegalStateException("첫 메시지는 입찰자만 전송할 수 있습니다.");
-        }
-
         if (sellerId.equals(bidderId)) {
             throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
         }
@@ -59,16 +55,18 @@ public class ChatMessageService {
             ChatRoom room = ChatRoom.create(sellerId, bidderId, propertyId);
             ChatRoom savedRoom = chatRoomRepository.save(room);
 
-            ChatMessage message = ChatMessage.create(senderId, savedRoom, content);
+            ChatMessage message = ChatMessage.create(bidderId, savedRoom, content);
             ChatMessage savedMessage = chatMessageRepository.save(message);
 
             savedRoom.updateLastMessageAt(savedMessage.getCreatedAt());
 
-            ReadState sellerState = readStateRepository.save(ReadState.create(savedRoom, sellerId));
+            ReadState sellerState = ReadState.create(savedRoom, sellerId);
             sellerState.increaseUnreadCount();
+            readStateRepository.save(sellerState);
 
-            ReadState bidderState = readStateRepository.save(ReadState.create(savedRoom, bidderId));
+            ReadState bidderState = ReadState.create(savedRoom, bidderId);
             bidderState.markRead(savedMessage.getId());
+            readStateRepository.save(bidderState);
 
             simpMessagingTemplate.convertAndSendToUser(
                     sellerId.toString(),
@@ -84,7 +82,9 @@ public class ChatMessageService {
         }
     }
 
-    // 메시지 전송
+    /**
+     * 메시지 전송
+     */
     @Transactional
     public ChatMessage sendMessage(SendMessageRequest request) {
 
@@ -125,7 +125,9 @@ public class ChatMessageService {
         return room.getSellerId();
     }
 
-    // 채팅 메시지 조회
+    /**
+     * 채팅 메시지 조회
+     */
     @Transactional(readOnly = true)
     public Slice<GetMessageResponse> getMessages(Long roomId, Long userId, Pageable pageable) {
 

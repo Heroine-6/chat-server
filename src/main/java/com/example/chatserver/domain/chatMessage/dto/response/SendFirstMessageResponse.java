@@ -11,9 +11,8 @@ import java.time.LocalDateTime;
 public class SendFirstMessageResponse {
 
     private Long roomId;
-    private LocalDateTime createdAt;
 
     public static SendFirstMessageResponse from(ChatRoom chatRoom) {
-        return new SendFirstMessageResponse(chatRoom.getId(), chatRoom.getCreatedAt());
+        return new SendFirstMessageResponse(chatRoom.getId());
     }
 }

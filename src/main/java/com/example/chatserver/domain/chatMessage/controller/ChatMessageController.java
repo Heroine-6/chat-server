@@ -32,17 +32,21 @@ public class ChatMessageController {
     private final ChatRoomRepository chatRoomRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // 첫 메시지 전송 + 방 생성
-    // TODO: 서버 연동 후 인증 추가
-    @PostMapping("/messages")
-    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@Valid @RequestBody SendFirstMessageRequest request) {
+    /**
+     * 첫 메시지 전송 + 방 생성
+     * TODO: 유저 인증 (only bidder)
+     */
+    @PostMapping("/messages/{bidderId}")
+    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@PathVariable Long bidderId, @Valid @RequestBody SendFirstMessageRequest request) {
 
-        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(request);
+        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, request);
 
         return ResponseEntity.ok(response);
     }
 
-    // 메시지 전송
+    /**
+     * 메시지 전송
+     */
     @MessageMapping("/message")
     public void sendMessage(SendMessageRequest request) {
 
@@ -63,7 +67,9 @@ public class ChatMessageController {
         );
     }
 
-    // 메시지 읽음
+    /**
+     * 메시지 읽음
+     */
     @MessageMapping("/read")
     public void markRead(MarkReadRequest request) {
 
@@ -84,7 +90,9 @@ public class ChatMessageController {
         );
     }
 
-    // 채팅 메시지 조회
+    /**
+     * 채팅 메시지 조회
+     */
     @GetMapping("/rooms/{roomId}/messages/{userId}")
     public ResponseEntity<Slice<GetMessageResponse>> getMessages(
             @PathVariable Long roomId,
