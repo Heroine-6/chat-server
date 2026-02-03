@@ -1,4 +1,4 @@
-package com.example.chatserver.domain.readState.dto.payload;
+package com.example.chatserver.domain.chatMessage.dto.payload;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

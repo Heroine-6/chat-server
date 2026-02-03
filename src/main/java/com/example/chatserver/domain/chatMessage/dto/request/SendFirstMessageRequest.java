@@ -7,18 +7,14 @@ import lombok.Getter;
 @Getter
 public class SendFirstMessageRequest {
 
-    // TODO: 서버 연동 후 content만 받도록 수정
+    /**
+     * TODO: PathVariable로 propertyId 받고, sellerId 자동으로 받을 수 있도록 수정
+     */
     @NotNull
     private Long propertyId;
 
     @NotNull
-    private Long bidderId;
-
-    @NotNull
     private Long sellerId;
-
-    @NotNull
-    private Long senderId;
 
     @NotBlank(message = "전송할 내용이 없습니다.")
     private String content;

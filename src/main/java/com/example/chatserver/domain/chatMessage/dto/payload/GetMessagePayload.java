@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @AllArgsConstructor
-public class ChatMessagePayload {
+public class GetMessagePayload {
 
     private Long messageId;
     private Long roomId;
@@ -16,7 +16,7 @@ public class ChatMessagePayload {
     private String content;
     private LocalDateTime createdAt;
 
-    public static ChatMessagePayload from(ChatMessage message) {
-        return new ChatMessagePayload(message.getId(), message.getChatRoom().getId(), message.getSenderId(), message.getContent(), message.getCreatedAt());
+    public static GetMessagePayload from(ChatMessage message) {
+        return new GetMessagePayload(message.getId(), message.getChatRoom().getId(), message.getSenderId(), message.getContent(), message.getCreatedAt());
     }
 }
