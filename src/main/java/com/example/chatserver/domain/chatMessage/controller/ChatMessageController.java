@@ -48,49 +48,6 @@ public class ChatMessageController {
     }
 
     /**
-     * 메시지 전송
-     * TODO: 유저 인증 수정 (지금은 테스트)
-     */
-    @MessageMapping("/message")
-    public void sendMessage(SendMessagePayload payload, Principal principal) {
-
-        Long senderId = Long.valueOf(principal.getName());
-
-        ChatMessage savedMessage = chatMessageService.sendMessage(senderId, payload);
-        ChatRoom room = savedMessage.getChatRoom();
-
-        Long receiverId = senderId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
-
-        GetMessagePayload out = GetMessagePayload.from(savedMessage);
-
-        messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/chat", out);
-        messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/chat", out);
-    }
-
-    /**
-     * 메시지 읽음
-     */
-    @MessageMapping("/read")
-    public void markRead(MarkReadRequest request) {
-
-        Long roomId = request.getRoomId();
-        Long readerId = request.getUserId();
-
-        Long lastReadMessageId = readStateService.markReadAll(roomId, readerId);
-
-        ChatRoom room = chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalStateException("채팅방이 존재하지 않습니다."));
-
-        Long otherId = readerId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
-
-        messagingTemplate.convertAndSendToUser(
-                otherId.toString(),
-                "/queue/read",
-                new ReadStatePayload(roomId, readerId, lastReadMessageId)
-        );
-    }
-
-    /**
      * 채팅 메시지 조회
      * TODO: 유저 인증
      */
