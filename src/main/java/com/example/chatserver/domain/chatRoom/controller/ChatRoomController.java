@@ -19,17 +19,22 @@ public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
 
-    // 이미 존재하는 채팅방인지 검증
-    @PostMapping("/open")
-    public ResponseEntity<FindRoomResponse> findRoom(@Valid @RequestBody FindRoomRequest request) {
+    /**
+     * 이미 존재하는 채팅방인지 검증
+     * TODO: 유저 인증
+     */
+    @PostMapping("/open/{bidderId}")
+    public ResponseEntity<FindRoomResponse> findRoom(@PathVariable Long bidderId, @Valid @RequestBody FindRoomRequest request) {
 
-        return chatRoomService.findRoom(request)
+        return chatRoomService.findRoom(bidderId, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    // 내 채팅방 조회
-    // TODO: 서버 연동 후 인증 추가
+    /**
+     * 내 채팅방 조회
+     * TODO: 유저 인증
+     */
     @GetMapping("/{userId}")
     public ResponseEntity<Slice<GetMyRoomsResponse>> getMyRooms(@PathVariable Long userId, @PageableDefault(size = 20) Pageable pageable) {
 

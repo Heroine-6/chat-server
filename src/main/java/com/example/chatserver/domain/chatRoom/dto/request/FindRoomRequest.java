@@ -7,9 +7,6 @@ import lombok.Getter;
 public class FindRoomRequest {
 
     @NotNull
-    private Long bidderId;
-
-    @NotNull
     private Long sellerId;
 
     @NotNull

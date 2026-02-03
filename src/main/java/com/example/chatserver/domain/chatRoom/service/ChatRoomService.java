@@ -27,16 +27,20 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final ReadStateRepository readStateRepository;
 
-    // 이미 존재하는 채팅방인지 검증
+    /**
+     * 이미 존재하는 채팅방인지 검증
+     */
     @Transactional
-    public Optional<FindRoomResponse> findRoom(@Valid FindRoomRequest request) {
+    public Optional<FindRoomResponse> findRoom(Long bidderId, FindRoomRequest request) {
 
         return chatRoomRepository
-                .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), request.getBidderId(), request.getSellerId())
+                .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), bidderId, request.getSellerId())
                 .map(FindRoomResponse::from);
     }
 
-    // 내 채팅방 조회
+    /**
+     * 내 채팅방 조회
+     */
     @Transactional(readOnly = true)
     public Slice<GetMyRoomsResponse> getMyRooms(Long userId, Pageable pageable) {
 
