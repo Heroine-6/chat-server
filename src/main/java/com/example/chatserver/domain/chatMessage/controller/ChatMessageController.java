@@ -30,7 +30,6 @@ public class ChatMessageController {
 
     /**
      * 첫 메시지 전송 + 방 생성
-     * TODO: 유저 인증 (only bidder)
      */
     @PostMapping("/messages")
     public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@RequestHeader("Authorization") String authorization, @Valid @RequestBody SendFirstMessageRequest request) {
@@ -43,14 +42,14 @@ public class ChatMessageController {
 
     /**
      * 채팅 메시지 조회
-     * TODO: 유저 인증
      */
-    @GetMapping("/rooms/{roomId}/messages/{userId}")
+    @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<Slice<GetMessageResponse>> getMessages(
             @PathVariable Long roomId,
-            @PathVariable Long userId,
+            @RequestHeader("Authorization") String authorization,
             @PageableDefault(size = 30, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
+        Long userId = jwtProvider.extractUserId(authorization);
         Slice<GetMessageResponse> response = chatMessageService.getMessages(roomId, userId, pageable);
 
         return ResponseEntity.ok(response);
