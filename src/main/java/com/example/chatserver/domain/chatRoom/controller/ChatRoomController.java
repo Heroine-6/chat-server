@@ -1,5 +1,6 @@
 package com.example.chatserver.domain.chatRoom.controller;
 
+import com.example.chatserver.common.provider.JwtProvider;
 import com.example.chatserver.domain.chatRoom.service.ChatRoomService;
 import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
@@ -18,13 +19,15 @@ import org.springframework.web.bind.annotation.*;
 public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
+    private final JwtProvider jwtProvider;
 
     /**
      * 이미 존재하는 채팅방인지 검증
-     * TODO: 유저 인증
      */
-    @PostMapping("/open/{bidderId}")
-    public ResponseEntity<FindRoomResponse> findRoom(@PathVariable Long bidderId, @Valid @RequestBody FindRoomRequest request) {
+    @PostMapping("/open")
+    public ResponseEntity<FindRoomResponse> findRoom(@RequestHeader("Authorization") String authorization, @Valid @RequestBody FindRoomRequest request) {
+
+        Long bidderId = jwtProvider.extractUserId(authorization);
 
         return chatRoomService.findRoom(bidderId, request)
                 .map(ResponseEntity::ok)
@@ -33,11 +36,11 @@ public class ChatRoomController {
 
     /**
      * 내 채팅방 조회
-     * TODO: 유저 인증
      */
-    @GetMapping("/{userId}")
-    public ResponseEntity<Slice<GetMyRoomsResponse>> getMyRooms(@PathVariable Long userId, @PageableDefault(size = 20) Pageable pageable) {
+    @GetMapping
+    public ResponseEntity<Slice<GetMyRoomsResponse>> getMyRooms(@RequestHeader("Authorization") String authorization, @PageableDefault(size = 20) Pageable pageable) {
 
+        Long userId = jwtProvider.extractUserId(authorization);
         Slice<GetMyRoomsResponse> response = chatRoomService.getMyRooms(userId, pageable);
 
         return ResponseEntity.ok(response);

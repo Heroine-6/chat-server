@@ -13,9 +13,6 @@ public class SendFirstMessageRequest {
     @NotNull
     private Long propertyId;
 
-    @NotNull
-    private Long sellerId;
-
     @NotBlank(message = "전송할 내용이 없습니다.")
     private String content;
 }

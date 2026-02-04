@@ -1,7 +1,10 @@
 package com.example.chatserver.domain.chatRoom.service;
 
+import com.example.chatserver.common.clients.MainServerClient;
+import com.example.chatserver.common.clients.dto.ChatServerResponse;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;
+import com.example.chatserver.common.response.GlobalResponse;
 import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
 import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
@@ -25,6 +28,7 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ReadStateRepository readStateRepository;
+    private final MainServerClient mainServerClient;
 
     /**
      * 이미 존재하는 채팅방인지 검증
@@ -35,6 +39,18 @@ public class ChatRoomService {
         return chatRoomRepository
                 .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), bidderId, request.getSellerId())
                 .map(FindRoomResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public ChatServerResponse fetchChatContext(Long propertyId, String authorization) {
+
+        GlobalResponse<ChatServerResponse> response = mainServerClient.getChatContext(authorization, propertyId);
+
+        if (response == null || !response.success() || response.data() == null) {
+            throw new RuntimeException("Failed to fetch chat context from main server");
+        }
+
+        return response.data();
     }
 
     /**

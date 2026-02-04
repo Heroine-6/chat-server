@@ -1,5 +1,7 @@
 package com.example.chatserver.domain.chatMessage.service;
 
+import com.example.chatserver.common.clients.MainServerClient;
+import com.example.chatserver.common.clients.dto.ChatServerResponse;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
@@ -29,18 +31,26 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStateRepository readStateRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final MainServerClient mainServerClient;
 
     /**
      * 첫 메시지 전송 + 방 생성
      */
     @Transactional
-    public SendFirstMessageResponse sendFirstMessage(Long bidderId, SendFirstMessageRequest request) {
+    public SendFirstMessageResponse sendFirstMessage(Long bidderId, String authorization, SendFirstMessageRequest request) {
 
-        Long sellerId = request.getSellerId();
         Long propertyId = request.getPropertyId();
         String content = request.getContent();
 
-        // TODO: Custom Exception
+        ChatServerResponse response = mainServerClient.getChatContext(authorization, propertyId).data();
+
+        Long sellerId = response.sellerId();
+        Long validatedBidderId = response.bidderId();
+
+        if (!validatedBidderId.equals(bidderId)) {
+            throw new IllegalStateException("입찰자가 일치하지 않습니다.");
+        }
+
         if (sellerId.equals(bidderId)) {
             throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
         }

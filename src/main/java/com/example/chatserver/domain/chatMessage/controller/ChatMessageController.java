@@ -1,5 +1,6 @@
 package com.example.chatserver.domain.chatMessage.controller;
 
+import com.example.chatserver.common.provider.JwtProvider;
 import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
@@ -25,29 +26,30 @@ public class ChatMessageController {
     private final ReadStateService readStateService;
     private final ChatRoomRepository chatRoomRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final JwtProvider jwtProvider;
 
     /**
      * 첫 메시지 전송 + 방 생성
-     * TODO: 유저 인증 (only bidder)
      */
-    @PostMapping("/messages/{bidderId}")
-    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@PathVariable Long bidderId, @Valid @RequestBody SendFirstMessageRequest request) {
+    @PostMapping("/messages")
+    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@RequestHeader("Authorization") String authorization, @Valid @RequestBody SendFirstMessageRequest request) {
 
-        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, request);
+        Long bidderId = jwtProvider.extractUserId(authorization);
+        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, authorization, request);
 
         return ResponseEntity.ok(response);
     }
 
     /**
      * 채팅 메시지 조회
-     * TODO: 유저 인증
      */
-    @GetMapping("/rooms/{roomId}/messages/{userId}")
+    @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<Slice<GetMessageResponse>> getMessages(
             @PathVariable Long roomId,
-            @PathVariable Long userId,
+            @RequestHeader("Authorization") String authorization,
             @PageableDefault(size = 30, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
+        Long userId = jwtProvider.extractUserId(authorization);
         Slice<GetMessageResponse> response = chatMessageService.getMessages(roomId, userId, pageable);
 
         return ResponseEntity.ok(response);

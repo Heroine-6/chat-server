@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="utf-8" />
-    <title>Chat UI (Safe)</title>
+    <title>Chat UI (JWT + Principal)</title>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
@@ -10,12 +10,13 @@
         *{ box-sizing:border-box; }
         body{ margin:0; font-family: Arial, sans-serif; background: var(--bg); }
         .app{ display:flex; height:100vh; }
-        .left{ width:320px; border-right:1px solid var(--border); background:#fff; display:flex; flex-direction:column; }
+        .left{ width:360px; border-right:1px solid var(--border); background:#fff; display:flex; flex-direction:column; }
         .right{ flex:1; display:flex; flex-direction:column; }
-        .topbar{ padding:12px; border-bottom:1px solid var(--border); background:#fff; display:flex; gap:8px; align-items:flex-end; }
+        .topbar{ padding:12px; border-bottom:1px solid var(--border); background:#fff; display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
         .topbar .field{ display:flex; flex-direction:column; gap:4px; }
-        .topbar input{ padding:8px; width:130px; }
+        .topbar input{ padding:8px; border:1px solid var(--border); border-radius:6px; }
         .btn{ padding:8px 10px; border:1px solid var(--border); background:#fff; cursor:pointer; border-radius:6px; }
+        .btn.primary{ background:#111; border-color:#111; color:#fff; }
         .rooms{ overflow:auto; padding:8px; }
         .room{ border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px; cursor:pointer; background:#fff; }
         .room.active{ border-color:#111; }
@@ -29,13 +30,13 @@
         .messages{ flex:1; overflow:auto; padding:14px; }
         .msgRow{ display:flex; margin-bottom:10px; }
         .msgRow.me{ justify-content:flex-end; }
-        .bubble{ max-width:62%; padding:10px 12px; border-radius:14px; border:1px solid var(--border); background:#fff; }
+        .bubble{ max-width:62%; padding:10px 12px; border-radius:14px; border:1px solid var(--border); background:#fff; white-space:pre-wrap; }
         .msgRow.me .bubble{ background:#111; color:#fff; border-color:#111; }
         .msgMeta{ margin-top:6px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:10px; }
         .msgRow.me .msgMeta{ color:#cfcfcf; }
         .composer{ padding:12px; border-top:1px solid var(--border); background:#fff; display:flex; gap:8px; }
         .composer input{ flex:1; padding:10px; border:1px solid var(--border); border-radius:10px; }
-        .log{ padding:10px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); background:#fff; height:120px; overflow:auto; white-space:pre-wrap; }
+        .log{ padding:10px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); background:#fff; height:140px; overflow:auto; white-space:pre-wrap; }
         .tiny{ font-size:12px; color:var(--muted); }
         code{ background:#f3f3f3; padding:1px 4px; border-radius:4px; }
     </style>
@@ -46,11 +47,22 @@
 
     <div class="left">
         <div class="topbar">
-            <div class="field">
-                <div class="tiny">userId (CONNECT 헤더 userId)</div>
-                <input id="userId" value="2">
+            <div class="field" style="min-width:140px;">
+                <div class="tiny">BASE_URL</div>
+                <input id="baseUrl" value="http://localhost:8081">
             </div>
-            <button class="btn" onclick="connect()">CONNECT</button>
+
+            <div class="field" style="min-width:180px; flex:1;">
+                <div class="tiny">JWT (Bearer 붙여도 됨)</div>
+                <input id="jwt" placeholder="Bearer eyJ... 또는 eyJ...">
+            </div>
+
+            <div class="field" style="min-width:90px;">
+                <div class="tiny">myId (표시용)</div>
+                <input id="me" value="1">
+            </div>
+
+            <button class="btn primary" onclick="connect()">CONNECT</button>
             <button class="btn" onclick="refreshRooms()">REFRESH</button>
         </div>
         <div class="rooms" id="rooms"></div>
@@ -66,7 +78,7 @@
 
         <div class="composer">
             <input id="content" placeholder="메시지 입력..." onkeydown="if(event.key==='Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">SEND</button>
+            <button class="btn primary" onclick="sendMessage()">SEND</button>
             <button class="btn" onclick="markRead()">READ</button>
         </div>
 
@@ -76,17 +88,19 @@
 </div>
 
 <script>
-    // ===== configurable endpoints (너 프로젝트에 맞게 여기만 수정하면 됨) =====
-    const WS_ENDPOINT = "/ws";
-    const ROOMS_URL = (userId) => "/api/v2/chats/rooms/" + userId;
-    const MESSAGES_URL = (roomId, userId) => "/api/v2/chats/rooms/" + roomId + "/messages/" + userId;
-    // ================================================================
+    // ===== endpoints (우리가 바꾼 컨트롤러 기준) =====
+    // rooms: GET /api/v2/chats/rooms   (Authorization)
+    // messages: GET /api/v2/chats/rooms/{roomId}/messages (Authorization)
+    // ws: /ws?token=...
+    const WS_ENDPOINT = (baseUrl, tokenOnly) => trimSlash(baseUrl) + "/ws?token=" + encodeURIComponent(tokenOnly);
+    const ROOMS_URL = (baseUrl) => trimSlash(baseUrl) + "/api/v2/chats/rooms";
+    const MESSAGES_URL = (baseUrl, roomId) => trimSlash(baseUrl) + "/api/v2/chats/rooms/" + roomId + "/messages?page=0&size=50&sort=createdAt,DESC";
+    // =================================================
 
     let stompClient = null;
     let chatSub = null;
     let readSub = null;
 
-    let me = null;
     let currentRoomId = null;
 
     let rooms = []; // [{roomId, lastMessageAt, unreadCount, otherLastReadMessageId}]
@@ -100,15 +114,39 @@
         el.scrollTop = el.scrollHeight;
     }
 
-    function getUserId(){
-        const v = document.getElementById("userId").value.trim();
+    function trimSlash(s){
+        return String(s || "").replace(/\/+$/,"");
+    }
+
+    function getBaseUrl(){
+        return document.getElementById("baseUrl").value.trim();
+    }
+
+    function getMe(){
+        const v = document.getElementById("me").value.trim();
         return v ? Number(v) : null;
+    }
+
+    function tokenOnly(){
+        let t = document.getElementById("jwt").value.trim();
+        if(!t) return "";
+        if(t.toLowerCase().startsWith("bearer ")) t = t.substring(7).trim();
+        return t.replace(/\s+/g,"");
+    }
+
+    function authHeaders(){
+        const t = tokenOnly();
+        return {
+            "Authorization": "Bearer " + t,
+            "Content-Type": "application/json"
+        };
     }
 
     function safeContentFromResponse(data){
         if (Array.isArray(data)) return data;
         if (data && Array.isArray(data.content)) return data.content;
-        // Slice가 다른 키를 쓰는 경우 대비
+        if (data && data.data && Array.isArray(data.data.content)) return data.data.content; // GlobalResponse 대응
+        if (data && data.data && Array.isArray(data.data)) return data.data;
         if (data && Array.isArray(data.contents)) return data.contents;
         return [];
     }
@@ -128,7 +166,6 @@
         const content = raw.content ?? raw.message ?? "";
         const createdAt = raw.createdAt ?? raw.created_at ?? "";
 
-        // id가 없을 때도 중복 제거를 위해 key를 만든다
         const key = (id != null)
             ? "id:" + id
             : ("f:" + senderId + "|" + content + "|" + createdAt);
@@ -137,18 +174,19 @@
     }
 
     function connect(){
-        const userId = getUserId();
-        if(!userId){ log("❌ userId 입력"); return; }
-        me = userId;
+        const baseUrl = getBaseUrl();
+        const t = tokenOnly();
+        if(!baseUrl){ log("❌ baseUrl 입력"); return; }
+        if(!t){ log("❌ JWT 입력"); return; }
 
-        const socket = new SockJS(WS_ENDPOINT);
+        const socket = new SockJS(WS_ENDPOINT(baseUrl, t));
         stompClient = Stomp.over(socket);
         stompClient.debug = () => {}; // debug off
 
         stompClient.connect(
-            { userId: String(userId) },
+            {}, // CONNECT 헤더에 userId 안 보냄 (Principal은 서버가 token으로 만든다)
             () => {
-                log("✅ CONNECTED as " + userId);
+                log("✅ WS CONNECTED");
                 subscribeQueues();
                 refreshRooms();
             },
@@ -177,22 +215,27 @@
     }
 
     async function refreshRooms(){
-        const userId = getUserId();
-        if(!userId){ log("❌ userId 입력"); return; }
+        const baseUrl = getBaseUrl();
+        const t = tokenOnly();
+        if(!t){ log("❌ JWT 입력"); return; }
 
         try{
-            const res = await fetch(ROOMS_URL(userId));
+            const res = await fetch(ROOMS_URL(baseUrl), {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
             if(!res.ok){
                 log("❌ rooms fetch failed: " + res.status);
+                log("⬅️ " + text);
                 return;
             }
-            const data = await res.json();
+
+            const data = JSON.parse(text);
             const content = safeContentFromResponse(data);
 
-            rooms = content.map(normalizeRoom)
-                .filter(r => r.roomId != null);
+            rooms = content.map(normalizeRoom).filter(r => r.roomId != null);
 
-            // cache other last read
             for (let i = 0; i < rooms.length; i++) {
                 const r = rooms[i];
                 otherLastReadByRoom[r.roomId] = r.otherLastReadMessageId;
@@ -250,7 +293,7 @@
         const header = document.getElementById("chatHeader");
         header.innerHTML = `
       <div class="title">Room #${roomId}</div>
-      <div class="sub">현재 userId=${me} / 자동 READ: <code>/app/read</code></div>
+      <div class="sub">myId(표시용)=${getMe()} / 자동 READ: <code>/app/read</code></div>
     `;
 
         renderRooms();
@@ -262,24 +305,30 @@
     }
 
     async function loadMessages(roomId){
-        const userId = getUserId();
-        if(!userId) return;
+        const baseUrl = getBaseUrl();
+        const t = tokenOnly();
+        if(!t) return;
 
         try{
-            const res = await fetch(MESSAGES_URL(roomId, userId));
+            const res = await fetch(MESSAGES_URL(baseUrl, roomId), {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
             if(!res.ok){
                 log("❌ messages fetch failed: " + res.status);
+                log("⬅️ " + text);
                 messagesByRoom[roomId] = [];
                 messageKeySetByRoom[roomId] = new Set();
                 return;
             }
-            const data = await res.json();
+
+            const data = JSON.parse(text);
             const content = safeContentFromResponse(data);
 
             const list = [];
             const keySet = new Set();
 
-            // 서버가 desc로 주는 경우가 많으니 createdAt 있으면 정렬해서 올림차순으로 보여주자
             for(let i=0;i<content.length;i++){
                 const nm = normalizeMessage(content[i]);
                 if(!keySet.has(nm.key)){
@@ -288,7 +337,6 @@
                 }
             }
 
-            // createdAt이 있다면 정렬
             list.sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 
             messagesByRoom[roomId] = list;
@@ -308,12 +356,13 @@
 
         const list = messagesByRoom[roomId] || [];
         const otherLastRead = otherLastReadByRoom[roomId] ?? null;
+        const myId = getMe();
 
         for(let i=0;i<list.length;i++){
             const msg = list[i];
 
             const row = document.createElement("div");
-            row.className = "msgRow" + (msg.senderId === me ? " me" : "");
+            row.className = "msgRow" + (msg.senderId === myId ? " me" : "");
 
             const bubble = document.createElement("div");
             bubble.className = "bubble";
@@ -326,11 +375,9 @@
             time.textContent = msg.createdAt ? msg.createdAt : "";
 
             const read = document.createElement("span");
-            if(msg.senderId === me){
+            if(msg.senderId === myId){
                 const ok = (msg.id != null && otherLastRead != null && Number(msg.id) <= Number(otherLastRead));
                 read.textContent = ok ? "✓ 읽음" : "";
-            } else {
-                read.textContent = "";
             }
 
             meta.appendChild(time);
@@ -363,7 +410,6 @@
     }
 
     function onIncomingChat(payload){
-        // payload: ChatMessagePayload 형태 (roomId, senderId, content, createdAt?, messageId?)
         const roomId = payload.roomId ?? payload.room_id;
         if(roomId == null) return;
 
@@ -382,13 +428,12 @@
             messagesByRoom[roomId].push(msg);
         }
 
-        // 현재 방이면 렌더 + 자동 READ
         if(currentRoomId === roomId){
             renderMessages(roomId);
             doMarkRead(roomId);
         } else {
-            // 내가 보낸 메시지 에코로 올 수도 있으니, "상대가 보낸 메시지"만 뱃지 증가
-            if(Number(msg.senderId) !== Number(me)){
+            // 상대가 보낸 메시지면 뱃지 증가
+            if(Number(msg.senderId) !== Number(getMe())){
                 const idx = rooms.findIndex(r => r.roomId === roomId);
                 if(idx !== -1) rooms[idx].unreadCount = Number(rooms[idx].unreadCount || 0) + 1;
             }
@@ -399,7 +444,6 @@
     }
 
     function onIncomingRead(payload){
-        // payload: {roomId, readerId, lastReadMessageId}
         const roomId = payload.roomId ?? payload.room_id;
         const lastRead = payload.lastReadMessageId ?? payload.last_read_message_id;
 
@@ -420,10 +464,10 @@
         const content = document.getElementById("content").value.trim();
         if(!content){ log("❌ content 입력"); return; }
 
-        const payload = { roomId: Number(currentRoomId), senderId: Number(me), content: content };
+        // ✅ senderId를 보내지 않는다 (서버가 Principal로 senderId 결정)
+        const payload = { roomId: Number(currentRoomId), content: content };
         stompClient.send("/app/message", {}, JSON.stringify(payload));
 
-        // sender echo가 오기 때문에 로컬 append는 하지 않음 (중복 방지)
         document.getElementById("content").value = "";
         log("➡️ sent: " + JSON.stringify(payload));
     }
@@ -436,7 +480,8 @@
     function doMarkRead(roomId){
         if(!stompClient || !stompClient.connected) return;
 
-        const payload = { roomId: Number(roomId), userId: Number(me) };
+        // ✅ userId를 보내지 않는다 (서버가 Principal로 userId 결정)
+        const payload = { roomId: Number(roomId) };
         stompClient.send("/app/read", {}, JSON.stringify(payload));
 
         // UI상 즉시 0 처리
