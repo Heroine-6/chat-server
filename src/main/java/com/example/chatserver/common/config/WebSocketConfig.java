@@ -1,5 +1,7 @@
 package com.example.chatserver.common.config;
 
+import com.example.chatserver.common.security.JwtHandshakeHandler;
+import com.example.chatserver.common.security.JwtHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -13,21 +15,29 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
-    private final HandshakeHandler handshakeHandler;
+    private final JwtHandshakeHandler jwtHandshakeHandler;
 
+    /**
+     * WebSocket 연결 진입점
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setHandshakeHandler(handshakeHandler)
+                .setHandshakeHandler(jwtHandshakeHandler)
                 .addInterceptors(jwtHandshakeInterceptor)
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 
+    /**
+     * 메시지 규칙 정의
+     * - send : /app/message
+     * - subscribe : /user/queue/message
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
-        registry.enableSimpleBroker("/topic", "/queue");
+        registry.enableSimpleBroker("/queue");
     }
 }

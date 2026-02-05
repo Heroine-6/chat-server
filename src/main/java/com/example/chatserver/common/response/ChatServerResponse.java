@@ -1,6 +1,7 @@
-package com.example.chatserver.common.clients.dto;
+package com.example.chatserver.common.response;
 
 public record ChatServerResponse(
+
         Long propertyId,
         Long sellerId,
         Long bidderId,

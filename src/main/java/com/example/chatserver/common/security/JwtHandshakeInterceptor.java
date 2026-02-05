@@ -1,7 +1,7 @@
-package com.example.chatserver.common.config;
+package com.example.chatserver.common.security;
 
-import com.example.chatserver.common.provider.JwtProvider;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -21,17 +21,19 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     private final JwtProvider jwtProvider;
 
     @Override
-    public boolean beforeHandshake(ServerHttpRequest request,
-                                   ServerHttpResponse response,
-                                   WebSocketHandler wsHandler,
-                                   Map<String, Object> attributes) {
+    public boolean beforeHandshake(@NonNull ServerHttpRequest request,
+                                   @NonNull ServerHttpResponse response,
+                                   @NonNull WebSocketHandler wsHandler,
+                                   @NonNull Map<String, Object> attributes) {
 
         if (request instanceof ServletServerHttpRequest servletRequest) {
+
             HttpServletRequest http = servletRequest.getServletRequest();
 
+            /* Authorization 헤더에서 JWT 추출 */
             String authorization = http.getHeader("Authorization");
 
-            // 헤더가 실리지 않을 경우
+            /* 헤더가 실리지 않을 경우 쿼리 파라미터로 처리 (SockJS) */
             if (authorization == null) {
                 String tokenParam = http.getParameter("token");
                 if (tokenParam != null && !tokenParam.isBlank()) {
@@ -39,6 +41,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
                 }
             }
 
+            /* JWT 검증 후 userId 저장 */
             if (authorization != null && authorization.startsWith("Bearer ")) {
                 Long userId = jwtProvider.extractUserId(authorization);
                 attributes.put(ATTR_USER_ID, userId);
@@ -50,10 +53,9 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     }
 
     @Override
-    public void afterHandshake(ServerHttpRequest request,
-                               ServerHttpResponse response,
-                               WebSocketHandler wsHandler,
-                               Exception exception) {
-    }
+    public void afterHandshake(@NonNull ServerHttpRequest request,
+                               @NonNull ServerHttpResponse response,
+                               @NonNull WebSocketHandler wsHandler,
+                               Exception exception) { }
 }
 
