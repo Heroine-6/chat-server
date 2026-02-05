@@ -41,13 +41,16 @@ public class ChatRoomService {
                 .map(FindRoomResponse::from);
     }
 
+    /**
+     * 채팅 컨텍스트 조회 (메인 서버 API)
+     */
     @Transactional(readOnly = true)
     public ChatServerResponse fetchChatContext(Long propertyId, String authorization) {
 
         GlobalResponse<ChatServerResponse> response = mainServerClient.getChatContext(authorization, propertyId);
 
         if (response == null || !response.success() || response.data() == null) {
-            throw new RuntimeException("Failed to fetch chat context from main server");
+            throw new RuntimeException("메인 서버 API 조회에 실패했습니다.");
         }
 
         return response.data();
