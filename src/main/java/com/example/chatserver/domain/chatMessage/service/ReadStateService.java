@@ -19,7 +19,36 @@ public class ReadStateService {
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStateRepository readStateRepository;
 
-    // 읽음 처리
+    /**
+     * ReadState 조회 또는 생성
+     */
+    public ReadState getOrCreateReadState(ChatRoom room, Long userId) {
+
+        return readStateRepository.findByChatRoomAndUserId(room, userId)
+                .orElseGet(() -> readStateRepository.save(ReadState.create(room, userId)));
+    }
+
+    /**
+     * 수신자 ReadState 업데이트 (읽지 않음 카운트 증가)
+     */
+    public void increaseUnreadCount(ChatRoom room, Long userId) {
+
+        ReadState state = getOrCreateReadState(room, userId);
+        state.increaseUnreadCount();
+    }
+
+    /**
+     * 송신자 ReadState 업데이트 (읽음 처리)
+     */
+    public void markAsRead(ChatRoom room, Long userId, Long messageId) {
+
+        ReadState state = getOrCreateReadState(room, userId);
+        state.markRead(messageId);
+    }
+
+    /**
+     * 채팅방의 모든 메시지 읽음 처리
+     */
     @Transactional
     public MarkReadResult markReadAll(Long roomId, Long userId) {
 
@@ -34,9 +63,7 @@ public class ReadStateService {
                 .map(ChatMessage::getId)
                 .orElse(null);
 
-        ReadState state = readStateRepository.findByChatRoomAndUserId(room, userId)
-                .orElseGet(() -> readStateRepository.save(ReadState.create(room, userId)));
-
+        ReadState state = getOrCreateReadState(room, userId);
         state.markRead(lastMessageId);
 
         Long otherId = userId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();

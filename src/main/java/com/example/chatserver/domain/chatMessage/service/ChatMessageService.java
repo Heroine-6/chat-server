@@ -3,7 +3,6 @@ package com.example.chatserver.domain.chatMessage.service;
 import com.example.chatserver.common.clients.MainServerClient;
 import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.entity.ReadState;
-import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
@@ -17,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +28,7 @@ public class ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStateRepository readStateRepository;
-    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final ReadStateService readStateService;
     private final MainServerClient mainServerClient;
 
     /**
@@ -78,16 +76,9 @@ public class ChatMessageService {
             bidderState.markRead(savedMessage.getId());
             readStateRepository.save(bidderState);
 
-            simpMessagingTemplate.convertAndSendToUser(
-                    sellerId.toString(),
-                    "/queue/chat",
-                    GetMessagePayload.from(savedMessage)
-            );
-
             return SendFirstMessageResponse.from(savedRoom);
 
         } catch (DataIntegrityViolationException e) {
-
             throw new IllegalStateException("이미 생성되었습니다.");
         }
     }
@@ -118,13 +109,9 @@ public class ChatMessageService {
 
         Long receiverId = senderId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
 
-        ReadState receiverState = readStateRepository.findByChatRoomAndUserId(room, receiverId)
-                .orElseGet(() -> readStateRepository.save(ReadState.create(room, receiverId)));
-        receiverState.increaseUnreadCount();
-
-        ReadState senderState = readStateRepository.findByChatRoomAndUserId(room, senderId)
-                .orElseGet(() -> readStateRepository.save(ReadState.create(room, senderId)));
-        senderState.markRead(savedMessage.getId());
+        // ReadState 업데이트 (ReadStateService에 위임)
+        readStateService.increaseUnreadCount(room, receiverId);  // 수신자: 읽지 않음
+        readStateService.markAsRead(room, senderId, savedMessage.getId());  // 송신자: 읽음
 
         return savedMessage;
     }
