@@ -1,6 +1,6 @@
 package com.example.chatserver.domain.chatMessage.controller;
 
-import com.example.chatserver.common.provider.JwtProvider;
+import com.example.chatserver.common.security.JwtProvider;
 import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse;
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;

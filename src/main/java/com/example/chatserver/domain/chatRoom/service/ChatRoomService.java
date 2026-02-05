@@ -1,7 +1,7 @@
 package com.example.chatserver.domain.chatRoom.service;
 
 import com.example.chatserver.common.clients.MainServerClient;
-import com.example.chatserver.common.clients.dto.ChatServerResponse;
+import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.common.response.GlobalResponse;

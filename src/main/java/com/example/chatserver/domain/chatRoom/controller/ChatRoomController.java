@@ -1,6 +1,6 @@
 package com.example.chatserver.domain.chatRoom.controller;
 
-import com.example.chatserver.common.provider.JwtProvider;
+import com.example.chatserver.common.security.JwtProvider;
 import com.example.chatserver.domain.chatRoom.service.ChatRoomService;
 import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;

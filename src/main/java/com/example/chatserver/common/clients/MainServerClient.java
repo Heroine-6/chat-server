@@ -1,6 +1,6 @@
 package com.example.chatserver.common.clients;
 
-import com.example.chatserver.common.clients.dto.ChatServerResponse;
+import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.response.GlobalResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;

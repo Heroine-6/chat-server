@@ -1,7 +1,7 @@
 package com.example.chatserver.domain.chatMessage.service;
 
 import com.example.chatserver.common.clients.MainServerClient;
-import com.example.chatserver.common.clients.dto.ChatServerResponse;
+import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
