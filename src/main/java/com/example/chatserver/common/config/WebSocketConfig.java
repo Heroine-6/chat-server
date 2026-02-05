@@ -32,7 +32,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     /**
      * 메시지 규칙 정의
      * - send : /app/message
-     * - subscribe : /user/queue/message
+     * - subscribe : /user/queue/chat
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
