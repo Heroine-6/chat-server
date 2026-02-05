@@ -6,7 +6,6 @@ import com.example.chatserver.domain.chatMessage.dto.payload.GetMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
 import com.example.chatserver.domain.chatMessage.dto.result.MarkReadResult;
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
-import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.dto.payload.ReadStatePayload;
 import com.example.chatserver.domain.chatMessage.dto.payload.MarkReadPayload;
 import com.example.chatserver.domain.chatMessage.service.ReadStateService;
@@ -23,7 +22,6 @@ public class WebSocketController {
 
     private final ChatMessageService chatMessageService;
     private final ReadStateService readStateService;
-    private final ChatRoomRepository chatRoomRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -56,10 +54,8 @@ public class WebSocketController {
 
         MarkReadResult result = readStateService.markReadAll(roomId, userId);
 
-        messagingTemplate.convertAndSendToUser(
-                result.getOtherId().toString(),
-                "/queue/read",
-                new ReadStatePayload(roomId, userId, result.getLastReadMessageId())
-        );
+        ReadStatePayload out = new ReadStatePayload(roomId, userId, result.getLastReadMessageId());
+
+        messagingTemplate.convertAndSendToUser(result.getOtherId().toString(), "/queue/read", out);
     }
 }
