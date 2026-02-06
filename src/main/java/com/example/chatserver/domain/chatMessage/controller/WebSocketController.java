@@ -47,9 +47,9 @@ public class WebSocketController {
      * 메시지 읽음
      */
     @MessageMapping("/read")
-    public void markRead(MarkReadPayload request, Principal principal) {
+    public void markRead(MarkReadPayload payload, Principal principal) {
 
-        Long roomId = request.getRoomId();
+        Long roomId = payload.getRoomId();
         Long userId = Long.valueOf(principal.getName());
 
         MarkReadResult result = readStateService.markReadAll(roomId, userId);

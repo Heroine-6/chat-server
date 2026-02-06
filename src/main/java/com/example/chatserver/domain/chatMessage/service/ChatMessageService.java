@@ -39,7 +39,7 @@ public class ChatMessageService {
 
         String content = request.getContent();
 
-        ChatServerResponse response = chatRoomService.fetchChatContext(propertyId, authorization);
+        ChatServerResponse response = chatRoomService.fetchChatContext(authorization, propertyId);
 
         Long sellerId = response.sellerId();
         Long validatedBidderId = response.bidderId();

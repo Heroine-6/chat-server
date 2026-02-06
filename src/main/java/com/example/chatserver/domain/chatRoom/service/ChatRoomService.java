@@ -43,7 +43,7 @@ public class ChatRoomService {
      * 외부 API에서 채팅 컨텍스트 조회
      */
     @Transactional(readOnly = true)
-    public ChatServerResponse fetchChatContext(Long propertyId, String authorization) {
+    public ChatServerResponse fetchChatContext(String authorization, Long propertyId) {
 
         GlobalResponse<ChatServerResponse> response = mainServerClient.getChatContext(authorization, propertyId);
 
