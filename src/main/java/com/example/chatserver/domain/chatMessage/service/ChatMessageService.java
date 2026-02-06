@@ -12,6 +12,7 @@ import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
 import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
+import com.example.chatserver.domain.chatRoom.service.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +30,7 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStateRepository readStateRepository;
     private final ReadStateService readStateService;
-    private final MainServerClient mainServerClient;
+    private final ChatRoomService chatRoomService;
 
     /**
      * 첫 메시지 전송 + 방 생성
@@ -40,7 +41,7 @@ public class ChatMessageService {
         Long propertyId = request.getPropertyId();
         String content = request.getContent();
 
-        ChatServerResponse response = mainServerClient.getChatContext(authorization, propertyId).data();
+        ChatServerResponse response = chatRoomService.fetchChatContext(propertyId, authorization);;
 
         Long sellerId = response.sellerId();
         Long validatedBidderId = response.bidderId();
