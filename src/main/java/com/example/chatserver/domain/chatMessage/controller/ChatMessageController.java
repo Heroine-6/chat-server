@@ -5,8 +5,6 @@ import com.example.chatserver.domain.chatMessage.dto.response.GetMessageResponse
 import com.example.chatserver.domain.chatMessage.service.ChatMessageService;
 import com.example.chatserver.domain.chatMessage.dto.request.SendFirstMessageRequest;
 import com.example.chatserver.domain.chatMessage.dto.response.SendFirstMessageResponse;
-import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.chatMessage.service.ReadStateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +12,6 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,19 +20,19 @@ import org.springframework.web.bind.annotation.*;
 public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
-    private final ReadStateService readStateService;
-    private final ChatRoomRepository chatRoomRepository;
-    private final SimpMessagingTemplate messagingTemplate;
     private final JwtProvider jwtProvider;
 
     /**
      * 첫 메시지 전송 + 방 생성
      */
-    @PostMapping("/messages")
-    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@RequestHeader("Authorization") String authorization, @Valid @RequestBody SendFirstMessageRequest request) {
+    @PostMapping("/messages/{propertyId}")
+    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long propertyId,
+            @Valid @RequestBody SendFirstMessageRequest request) {
 
         Long bidderId = jwtProvider.extractUserId(authorization);
-        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, authorization, request);
+        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, authorization, propertyId, request);
 
         return ResponseEntity.ok(response);
     }
@@ -45,8 +42,8 @@ public class ChatMessageController {
      */
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<Slice<GetMessageResponse>> getMessages(
-            @PathVariable Long roomId,
             @RequestHeader("Authorization") String authorization,
+            @PathVariable Long roomId,
             @PageableDefault(size = 30, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Long userId = jwtProvider.extractUserId(authorization);

@@ -5,11 +5,10 @@ import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.common.response.GlobalResponse;
-import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
+import com.example.chatserver.domain.chatMessage.service.ReadStateService;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
 import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -20,24 +19,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.stream.Collectors.toMap;
 
 @Service
 @RequiredArgsConstructor
 public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
-    private final ReadStateRepository readStateRepository;
+    private final ReadStateService readStateService;
     private final MainServerClient mainServerClient;
 
     /**
      * 이미 존재하는 채팅방인지 검증
      */
-    @Transactional
-    public Optional<FindRoomResponse> findRoom(Long bidderId, FindRoomRequest request) {
+    @Transactional(readOnly = true)
+    public Optional<FindRoomResponse> findRoom(Long bidderId, Long propertyId) {
 
         return chatRoomRepository
-                .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), bidderId, request.getSellerId())
+                .findByBidderIdAndPropertyId(bidderId, propertyId)
                 .map(FindRoomResponse::from);
     }
 
@@ -45,7 +43,7 @@ public class ChatRoomService {
      * 외부 API에서 채팅 컨텍스트 조회
      */
     @Transactional(readOnly = true)
-    public ChatServerResponse fetchChatContext(Long propertyId, String authorization) {
+    public ChatServerResponse fetchChatContext(String authorization, Long propertyId) {
 
         GlobalResponse<ChatServerResponse> response = mainServerClient.getChatContext(authorization, propertyId);
 
@@ -70,36 +68,10 @@ public class ChatRoomService {
             return rooms.map(room -> GetMyRoomsResponse.from(room, 0L, null));
         }
 
-        Map<Long, ReadState> myReadStateMap = loadMyReadStates(roomList, userId);
-        Map<String, ReadState> otherReadStateMap = loadOtherReadStates(roomList, userId);
+        Map<Long, ReadState> myReadStateMap = readStateService.loadMyReadStates(roomList, userId);
+        Map<String, ReadState> otherReadStateMap = readStateService.loadOtherReadStates(roomList, userId);
 
         return rooms.map(room -> mapToResponse(room, userId, myReadStateMap, otherReadStateMap));
-    }
-
-    /**
-     * 내 ReadState 조회
-     */
-    private Map<Long, ReadState> loadMyReadStates(List<ChatRoom> roomList, Long userId) {
-
-        List<Long> roomIds = roomList.stream().map(ChatRoom::getId).toList();
-
-        List<ReadState> myReadStates = readStateRepository.findByChatRoomIdInAndUserId(roomIds, userId);
-
-        return myReadStates.stream().collect(toMap(rs -> rs.getChatRoom().getId(), rs -> rs));
-    }
-
-    /**
-     * 상대방 ReadState 조회
-     */
-    private Map<String, ReadState> loadOtherReadStates(List<ChatRoom> roomList, Long userId) {
-
-        List<Long> roomIds = roomList.stream().map(ChatRoom::getId).toList();
-        List<Long> otherUserIds = roomList.stream().map(room -> userId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId()).distinct().toList();
-
-        List<ReadState> otherReadStates = readStateRepository.findByChatRoomIdInAndUserIdIn(roomIds, otherUserIds);
-
-        return otherReadStates.stream().collect(toMap(rs -> createKey(rs.getChatRoom().getId(), rs.getUserId()), rs -> rs
-        ));
     }
 
     /**
@@ -113,16 +85,9 @@ public class ChatRoomService {
 
         /* 상대가 마지막으로 읽은 메시지 */
         Long otherUserId = userId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
-        ReadState otherState = otherReadStateMap.get(createKey(room.getId(), otherUserId));
+        ReadState otherState = otherReadStateMap.get(readStateService.createKey(room.getId(), otherUserId));
         Long otherLastReadMessageId = (otherState == null) ? null : otherState.getLastReadMessageId();
 
         return GetMyRoomsResponse.from(room, unreadCount, otherLastReadMessageId);
-    }
-
-    /**
-     * Map 키 생성 헬퍼 메서드
-     */
-    private String createKey(Long roomId, Long userId) {
-        return roomId + ":" + userId;
     }
 }

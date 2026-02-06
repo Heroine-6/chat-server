@@ -1,6 +1,5 @@
 package com.example.chatserver.domain.chatMessage.service;
 
-import com.example.chatserver.common.clients.MainServerClient;
 import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
@@ -12,6 +11,7 @@ import com.example.chatserver.common.entity.ChatMessage;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
 import com.example.chatserver.domain.chatMessage.repository.ChatMessageRepository;
 import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
+import com.example.chatserver.domain.chatRoom.service.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
@@ -29,18 +29,17 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStateRepository readStateRepository;
     private final ReadStateService readStateService;
-    private final MainServerClient mainServerClient;
+    private final ChatRoomService chatRoomService;
 
     /**
      * 첫 메시지 전송 + 방 생성
      */
     @Transactional
-    public SendFirstMessageResponse sendFirstMessage(Long bidderId, String authorization, SendFirstMessageRequest request) {
+    public SendFirstMessageResponse sendFirstMessage(Long bidderId, String authorization, Long propertyId, SendFirstMessageRequest request) {
 
-        Long propertyId = request.getPropertyId();
         String content = request.getContent();
 
-        ChatServerResponse response = mainServerClient.getChatContext(authorization, propertyId).data();
+        ChatServerResponse response = chatRoomService.fetchChatContext(authorization, propertyId);
 
         Long sellerId = response.sellerId();
         Long validatedBidderId = response.bidderId();
@@ -53,7 +52,7 @@ public class ChatMessageService {
             throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
         }
 
-        Optional<ChatRoom> existingRoom = chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, sellerId);
+        Optional<ChatRoom> existingRoom = chatRoomRepository.findByBidderIdAndPropertyId(bidderId, propertyId);
 
         if (existingRoom.isPresent()) {
             throw new IllegalStateException("이미 채팅방이 존재합니다.");
@@ -109,9 +108,8 @@ public class ChatMessageService {
 
         Long receiverId = senderId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
 
-        // ReadState 업데이트 (ReadStateService에 위임)
-        readStateService.increaseUnreadCount(room, receiverId);  // 수신자: 읽지 않음
-        readStateService.markAsRead(room, senderId, savedMessage.getId());  // 송신자: 읽음
+        readStateService.increaseUnreadCount(room, receiverId);
+        readStateService.markAsRead(room, senderId, savedMessage.getId());
 
         return savedMessage;
     }

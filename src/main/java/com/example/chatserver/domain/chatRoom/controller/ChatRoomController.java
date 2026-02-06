@@ -2,10 +2,8 @@ package com.example.chatserver.domain.chatRoom.controller;
 
 import com.example.chatserver.common.security.JwtProvider;
 import com.example.chatserver.domain.chatRoom.service.ChatRoomService;
-import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
 import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -24,12 +22,12 @@ public class ChatRoomController {
     /**
      * 이미 존재하는 채팅방인지 검증
      */
-    @PostMapping("/open")
-    public ResponseEntity<FindRoomResponse> findRoom(@RequestHeader("Authorization") String authorization, @Valid @RequestBody FindRoomRequest request) {
+    @GetMapping("/open/{propertyId}")
+    public ResponseEntity<FindRoomResponse> findRoom(@RequestHeader("Authorization") String authorization, @PathVariable Long propertyId) {
 
         Long bidderId = jwtProvider.extractUserId(authorization);
 
-        return chatRoomService.findRoom(bidderId, request)
+        return chatRoomService.findRoom(bidderId, propertyId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
