@@ -1,6 +1,5 @@
 package com.example.chatserver.domain.chatMessage.service;
 
-import com.example.chatserver.common.clients.MainServerClient;
 import com.example.chatserver.common.response.ChatServerResponse;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.domain.chatMessage.dto.payload.SendMessagePayload;
@@ -41,7 +40,7 @@ public class ChatMessageService {
         Long propertyId = request.getPropertyId();
         String content = request.getContent();
 
-        ChatServerResponse response = chatRoomService.fetchChatContext(propertyId, authorization);;
+        ChatServerResponse response = chatRoomService.fetchChatContext(propertyId, authorization);
 
         Long sellerId = response.sellerId();
         Long validatedBidderId = response.bidderId();
