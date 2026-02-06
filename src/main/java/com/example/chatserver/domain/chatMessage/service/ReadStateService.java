@@ -11,6 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+
+import static java.util.stream.Collectors.toMap;
+
 @Service
 @RequiredArgsConstructor
 public class ReadStateService {
@@ -44,6 +49,39 @@ public class ReadStateService {
 
         ReadState state = getOrCreateReadState(room, userId);
         state.markRead(messageId);
+    }
+
+    /**
+     * 내 ReadState 조회
+     */
+    public Map<Long, ReadState> loadMyReadStates(List<ChatRoom> roomList, Long userId) {
+
+        List<Long> roomIds = roomList.stream().map(ChatRoom::getId).toList();
+
+        List<ReadState> myReadStates = readStateRepository.findByChatRoomIdInAndUserId(roomIds, userId);
+
+        return myReadStates.stream().collect(toMap(rs -> rs.getChatRoom().getId(), rs -> rs));
+    }
+
+    /**
+     * 상대방 ReadState 조회
+     */
+    public Map<String, ReadState> loadOtherReadStates(List<ChatRoom> roomList, Long userId) {
+
+        List<Long> roomIds = roomList.stream().map(ChatRoom::getId).toList();
+        List<Long> otherUserIds = roomList.stream().map(room -> userId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId()).distinct().toList();
+
+        List<ReadState> otherReadStates = readStateRepository.findByChatRoomIdInAndUserIdIn(roomIds, otherUserIds);
+
+        return otherReadStates.stream().collect(toMap(rs -> createKey(rs.getChatRoom().getId(), rs.getUserId()), rs -> rs
+        ));
+    }
+
+    /**
+     * Map 키 생성 헬퍼 메서드
+     */
+    public String createKey(Long roomId, Long userId) {
+        return roomId + ":" + userId;
     }
 
     /**
