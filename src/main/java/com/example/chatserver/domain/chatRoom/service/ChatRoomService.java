@@ -10,7 +10,6 @@ import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
 import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
-import com.example.chatserver.domain.chatMessage.repository.ReadStateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.stream.Collectors.toMap;
 
 @Service
 @RequiredArgsConstructor
