@@ -31,11 +31,14 @@ public class ChatMessageController {
     /**
      * 첫 메시지 전송 + 방 생성
      */
-    @PostMapping("/messages")
-    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(@RequestHeader("Authorization") String authorization, @Valid @RequestBody SendFirstMessageRequest request) {
+    @PostMapping("/messages/{propertyId}")
+    public ResponseEntity<SendFirstMessageResponse> sendFirstMessage(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long propertyId,
+            @Valid @RequestBody SendFirstMessageRequest request) {
 
         Long bidderId = jwtProvider.extractUserId(authorization);
-        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, authorization, request);
+        SendFirstMessageResponse response = chatMessageService.sendFirstMessage(bidderId, authorization, propertyId, request);
 
         return ResponseEntity.ok(response);
     }

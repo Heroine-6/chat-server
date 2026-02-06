@@ -35,9 +35,8 @@ public class ChatMessageService {
      * 첫 메시지 전송 + 방 생성
      */
     @Transactional
-    public SendFirstMessageResponse sendFirstMessage(Long bidderId, String authorization, SendFirstMessageRequest request) {
+    public SendFirstMessageResponse sendFirstMessage(Long bidderId, String authorization, Long propertyId, SendFirstMessageRequest request) {
 
-        Long propertyId = request.getPropertyId();
         String content = request.getContent();
 
         ChatServerResponse response = chatRoomService.fetchChatContext(propertyId, authorization);
@@ -109,9 +108,8 @@ public class ChatMessageService {
 
         Long receiverId = senderId.equals(room.getSellerId()) ? room.getBidderId() : room.getSellerId();
 
-        // ReadState 업데이트 (ReadStateService에 위임)
-        readStateService.increaseUnreadCount(room, receiverId);  // 수신자: 읽지 않음
-        readStateService.markAsRead(room, senderId, savedMessage.getId());  // 송신자: 읽음
+        readStateService.increaseUnreadCount(room, receiverId);
+        readStateService.markAsRead(room, senderId, savedMessage.getId());
 
         return savedMessage;
     }
