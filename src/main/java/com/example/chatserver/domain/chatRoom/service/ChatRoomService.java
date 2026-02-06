@@ -6,7 +6,6 @@ import com.example.chatserver.common.entity.ChatRoom;
 import com.example.chatserver.common.entity.ReadState;
 import com.example.chatserver.common.response.GlobalResponse;
 import com.example.chatserver.domain.chatMessage.service.ReadStateService;
-import com.example.chatserver.domain.chatRoom.dto.request.FindRoomRequest;
 import com.example.chatserver.domain.chatRoom.dto.response.GetMyRoomsResponse;
 import com.example.chatserver.domain.chatRoom.dto.response.FindRoomResponse;
 import com.example.chatserver.domain.chatRoom.repository.ChatRoomRepository;
@@ -32,11 +31,11 @@ public class ChatRoomService {
     /**
      * 이미 존재하는 채팅방인지 검증
      */
-    @Transactional
-    public Optional<FindRoomResponse> findRoom(Long bidderId, FindRoomRequest request) {
+    @Transactional(readOnly = true)
+    public Optional<FindRoomResponse> findRoom(Long bidderId, Long propertyId) {
 
         return chatRoomRepository
-                .findByPropertyIdAndBidderIdAndSellerId(request.getPropertyId(), bidderId, request.getSellerId())
+                .findByBidderIdAndPropertyId(bidderId, propertyId)
                 .map(FindRoomResponse::from);
     }
 

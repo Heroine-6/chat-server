@@ -52,7 +52,7 @@ public class ChatMessageService {
             throw new IllegalStateException("판매자와 입찰자는 동일할 수 없습니다.");
         }
 
-        Optional<ChatRoom> existingRoom = chatRoomRepository.findByPropertyIdAndBidderIdAndSellerId(propertyId, bidderId, sellerId);
+        Optional<ChatRoom> existingRoom = chatRoomRepository.findByBidderIdAndPropertyId(bidderId, propertyId);
 
         if (existingRoom.isPresent()) {
             throw new IllegalStateException("이미 채팅방이 존재합니다.");
