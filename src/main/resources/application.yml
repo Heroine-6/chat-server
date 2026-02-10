@@ -24,3 +24,7 @@ main:
 
 server:
   port: 8081
+
+logging:
+  slack:
+    webhook: ${SLACK_WEBHOOK_URL}
