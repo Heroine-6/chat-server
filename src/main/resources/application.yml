@@ -21,6 +21,3 @@ jwt:
 main:
   server:
     url: ${MAIN_SERVER_URL}
-
-server:
-  port: 8081
