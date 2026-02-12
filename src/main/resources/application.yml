@@ -21,3 +21,7 @@ jwt:
 main:
   server:
     url: ${MAIN_SERVER_URL}
+
+logging:
+  slack:
+    webhook: ${SLACK_WEBHOOK_URL}

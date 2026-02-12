@@ -1,0 +1,22 @@
+name: chat
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: chat-alloy
+    environment:
+      - COMPOSE_PROJECT_NAME=chat
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - SERVER_NAME=chat
+      - LOKI_ENV=dev
+      - LOKI_SERVICE_NAME=chat
+    volumes:
+      - ./logs:/var/log/app
+      - ./alloy.yml:/etc/alloy/alloy.yml
+
+    command: run /etc/alloy/alloy.yml
+    restart: unless-stopped
+
+networks:
+  default:
+    name: budong-network
+    external: true
