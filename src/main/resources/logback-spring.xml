@@ -5,7 +5,7 @@
                     name="SLACK_WEBHOOK"
                     source="logging.slack.webhook"/>
 
-    <property name="LOG_DIR" value="./logging/logs"/>
+    <property name="LOG_DIR" value="/app/logs"/>
 
 
     <appender name="FILE"
