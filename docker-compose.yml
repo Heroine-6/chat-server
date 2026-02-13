@@ -13,6 +13,8 @@ services:
 
   alloy:
     image: grafana/alloy:latest
+    depends_on:
+      - spring
     environment:
       - LOKI_URL=${LOKI_URL}
       - SERVER_NAME=chat
