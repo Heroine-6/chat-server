@@ -10,6 +10,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 @FeignClient(name = "mainServerClient", url = "${main.server.url}")
 public interface MainServerClient {
 
-    @GetMapping("/api/v2/internal/chat/{propertyId}")
+    @GetMapping("/api/internal/chat/v2/{propertyId}")
     GlobalResponse<ChatServerResponse> getChatContext(@RequestHeader String authorization, @PathVariable Long propertyId);
 }
