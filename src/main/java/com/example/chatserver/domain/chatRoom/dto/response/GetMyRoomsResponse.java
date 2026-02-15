@@ -11,11 +11,14 @@ import java.time.LocalDateTime;
 public class GetMyRoomsResponse {
 
     private Long roomId;
+    private Long propertyId;
+    private Long sellerId;
+    private Long bidderId;
     private LocalDateTime lastMessageAt;
     private Long unreadCount;
     private Long lastReadMessageId;
 
     public static GetMyRoomsResponse from(ChatRoom room, Long unreadCount, Long lastReadMessageId) {
-        return new GetMyRoomsResponse(room.getId(), room.getLastMessageAt(), unreadCount, lastReadMessageId);
+        return new GetMyRoomsResponse(room.getId(), room.getPropertyId(), room.getSellerId(), room.getBidderId(), room.getLastMessageAt(), unreadCount, lastReadMessageId);
     }
 }
