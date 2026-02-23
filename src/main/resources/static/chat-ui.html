@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>Chat UI (JWT + Principal)</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        :root { --border:#e6e6e6; --bg:#fafafa; --muted:#666; }
+        *{ box-sizing:border-box; }
+        body{ margin:0; font-family: Arial, sans-serif; background: var(--bg); }
+        .app{ display:flex; height:100vh; }
+        .left{ width:360px; border-right:1px solid var(--border); background:#fff; display:flex; flex-direction:column; }
+        .right{ flex:1; display:flex; flex-direction:column; }
+        .topbar{ padding:12px; border-bottom:1px solid var(--border); background:#fff; display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+        .topbar .field{ display:flex; flex-direction:column; gap:4px; }
+        .topbar input{ padding:8px; border:1px solid var(--border); border-radius:6px; }
+        .btn{ padding:8px 10px; border:1px solid var(--border); background:#fff; cursor:pointer; border-radius:6px; }
+        .btn.primary{ background:#111; border-color:#111; color:#fff; }
+        .rooms{ overflow:auto; padding:8px; }
+        .room{ border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px; cursor:pointer; background:#fff; }
+        .room.active{ border-color:#111; }
+        .room .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .room .meta{ font-size:12px; color:var(--muted); margin-top:6px; }
+        .badge{ min-width:22px; height:22px; border-radius:11px; background:#111; color:#fff; font-size:12px;
+            display:flex; align-items:center; justify-content:center; padding:0 7px; }
+        .chatHeader{ padding:12px; border-bottom:1px solid var(--border); background:#fff; }
+        .chatHeader .title{ font-weight:700; }
+        .chatHeader .sub{ margin-top:4px; font-size:12px; color:var(--muted); }
+        .messages{ flex:1; overflow:auto; padding:14px; }
+        .msgRow{ display:flex; margin-bottom:10px; }
+        .msgRow.me{ justify-content:flex-end; }
+        .bubble{ max-width:62%; padding:10px 12px; border-radius:14px; border:1px solid var(--border); background:#fff; white-space:pre-wrap; }
+        .msgRow.me .bubble{ background:#111; color:#fff; border-color:#111; }
+        .msgMeta{ margin-top:6px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:10px; }
+        .msgRow.me .msgMeta{ color:#cfcfcf; }
+        .composer{ padding:12px; border-top:1px solid var(--border); background:#fff; display:flex; gap:8px; }
+        .composer input{ flex:1; padding:10px; border:1px solid var(--border); border-radius:10px; }
+        .log{ padding:10px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); background:#fff; height:140px; overflow:auto; white-space:pre-wrap; }
+        .tiny{ font-size:12px; color:var(--muted); }
+        code{ background:#f3f3f3; padding:1px 4px; border-radius:4px; }
+    </style>
+</head>
+
+<body>
+<div class="app">
+
+    <div class="left">
+        <div class="topbar">
+            <div class="field" style="min-width:140px;">
+                <div class="tiny">BASE_URL</div>
+                <input id="baseUrl" value="http://localhost:8081">
+            </div>
+
+            <div class="field" style="min-width:180px; flex:1;">
+                <div class="tiny">JWT (Bearer 붙여도 됨)</div>
+                <input id="jwt" placeholder="Bearer eyJ... 또는 eyJ...">
+            </div>
+
+            <div class="field" style="min-width:90px;">
+                <div class="tiny">myId (표시용)</div>
+                <input id="me" value="1">
+            </div>
+
+            <button class="btn primary" onclick="connect()">CONNECT</button>
+            <button class="btn" onclick="refreshRooms()">REFRESH</button>
+        </div>
+        <div class="rooms" id="rooms"></div>
+    </div>
+
+    <div class="right">
+        <div class="chatHeader" id="chatHeader">
+            <div class="title">채팅방을 선택해줘</div>
+            <div class="sub">좌측 목록 클릭 → 메시지 로드 + 자동 READ</div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="composer">
+            <input id="content" placeholder="메시지 입력..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <button class="btn primary" onclick="sendMessage()">SEND</button>
+            <button class="btn" onclick="markRead()">READ</button>
+        </div>
+
+        <div class="log" id="log"></div>
+    </div>
+
+</div>
+
+<script>
+    // ===== endpoints (우리가 바꾼 컨트롤러 기준) =====
+    // rooms: GET /api/v2/chats/rooms   (Authorization)
+    // messages: GET /api/v2/chats/rooms/{roomId}/messages (Authorization)
+    // ws: /ws?token=...
+    const WS_ENDPOINT = (baseUrl, tokenOnly) => trimSlash(baseUrl) + "/ws?token=" + encodeURIComponent(tokenOnly);
+    const ROOMS_URL = (baseUrl) => trimSlash(baseUrl) + "/api/v2/chats/rooms";
+    const MESSAGES_URL = (baseUrl, roomId) => trimSlash(baseUrl) + "/api/v2/chats/rooms/" + roomId + "/messages?page=0&size=50&sort=createdAt,DESC";
+    // =================================================
+
+    let stompClient = null;
+    let chatSub = null;
+    let readSub = null;
+
+    let currentRoomId = null;
+
+    let rooms = []; // [{roomId, lastMessageAt, unreadCount, otherLastReadMessageId}]
+    let messagesByRoom = {}; // roomId -> [{key,id,senderId,content,createdAt}]
+    let messageKeySetByRoom = {}; // roomId -> Set
+    let otherLastReadByRoom = {}; // roomId -> lastReadMessageId
+
+    function log(msg){
+        const el = document.getElementById("log");
+        el.textContent += msg + "\n";
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function trimSlash(s){
+        return String(s || "").replace(/\/+$/,"");
+    }
+
+    function getBaseUrl(){
+        return document.getElementById("baseUrl").value.trim();
+    }
+
+    function getMe(){
+        const v = document.getElementById("me").value.trim();
+        return v ? Number(v) : null;
+    }
+
+    function tokenOnly(){
+        let t = document.getElementById("jwt").value.trim();
+        if(!t) return "";
+        if(t.toLowerCase().startsWith("bearer ")) t = t.substring(7).trim();
+        return t.replace(/\s+/g,"");
+    }
+
+    function authHeaders(){
+        const t = tokenOnly();
+        return {
+            "Authorization": "Bearer " + t,
+            "Content-Type": "application/json"
+        };
+    }
+
+    function safeContentFromResponse(data){
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.content)) return data.content;
+        if (data && data.data && Array.isArray(data.data.content)) return data.data.content; // GlobalResponse 대응
+        if (data && data.data && Array.isArray(data.data)) return data.data;
+        if (data && Array.isArray(data.contents)) return data.contents;
+        return [];
+    }
+
+    function normalizeRoom(raw){
+        return {
+            roomId: raw.roomId ?? raw.id ?? raw.room_id,
+            lastMessageAt: raw.lastMessageAt ?? raw.last_message_at ?? raw.createdAt ?? raw.created_at ?? null,
+            unreadCount: raw.unreadCount ?? raw.unread_count ?? 0,
+            otherLastReadMessageId: raw.otherLastReadMessageId ?? raw.other_last_read_message_id ?? null
+        };
+    }
+
+    function normalizeMessage(raw){
+        const id = raw.messageId ?? raw.id ?? raw.message_id ?? null;
+        const senderId = raw.senderId ?? raw.sender_id;
+        const content = raw.content ?? raw.message ?? "";
+        const createdAt = raw.createdAt ?? raw.created_at ?? "";
+
+        const key = (id != null)
+            ? "id:" + id
+            : ("f:" + senderId + "|" + content + "|" + createdAt);
+
+        return { key: key, id: id, senderId: Number(senderId), content: String(content), createdAt: String(createdAt) };
+    }
+
+    function connect(){
+        const baseUrl = getBaseUrl();
+        const t = tokenOnly();
+        if(!baseUrl){ log("❌ baseUrl 입력"); return; }
+        if(!t){ log("❌ JWT 입력"); return; }
+
+        const socket = new SockJS(WS_ENDPOINT(baseUrl, t));
+        stompClient = Stomp.over(socket);
+        stompClient.debug = () => {}; // debug off
+
+        stompClient.connect(
+            {}, // CONNECT 헤더에 userId 안 보냄 (Principal은 서버가 token으로 만든다)
+            () => {
+                log("✅ WS CONNECTED");
+                subscribeQueues();
+                refreshRooms();
+            },
+            (err) => log("❌ CONNECT ERROR: " + err)
+        );
+    }
+
+    function subscribeQueues(){
+        if(!stompClient || !stompClient.connected) return;
+
+        if(!chatSub){
+            chatSub = stompClient.subscribe("/user/queue/chat", (m) => {
+                const payload = JSON.parse(m.body);
+                onIncomingChat(payload);
+            });
+            log("✅ SUB /user/queue/chat");
+        }
+
+        if(!readSub){
+            readSub = stompClient.subscribe("/user/queue/read", (m) => {
+                const payload = JSON.parse(m.body);
+                onIncomingRead(payload);
+            });
+            log("✅ SUB /user/queue/read");
+        }
+    }
+
+    async function refreshRooms(){
+        const baseUrl = getBaseUrl();
+        const t = tokenOnly();
+        if(!t){ log("❌ JWT 입력"); return; }
+
+        try{
+            const res = await fetch(ROOMS_URL(baseUrl), {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
+            if(!res.ok){
+                log("❌ rooms fetch failed: " + res.status);
+                log("⬅️ " + text);
+                return;
+            }
+
+            const data = JSON.parse(text);
+            const content = safeContentFromResponse(data);
+
+            rooms = content.map(normalizeRoom).filter(r => r.roomId != null);
+
+            for (let i = 0; i < rooms.length; i++) {
+                const r = rooms[i];
+                otherLastReadByRoom[r.roomId] = r.otherLastReadMessageId;
+            }
+
+            renderRooms();
+            log("✅ rooms loaded: " + rooms.length);
+
+        }catch(e){
+            log("❌ rooms fetch error: " + e);
+        }
+    }
+
+    function renderRooms(){
+        const el = document.getElementById("rooms");
+        el.innerHTML = "";
+
+        for(let i=0;i<rooms.length;i++){
+            const r = rooms[i];
+            const div = document.createElement("div");
+            div.className = "room" + (r.roomId === currentRoomId ? " active" : "");
+            div.onclick = () => openRoom(r.roomId);
+
+            const top = document.createElement("div");
+            top.className = "row";
+
+            const left = document.createElement("div");
+            left.innerHTML = "<b>Room #" + r.roomId + "</b>";
+
+            const right = document.createElement("div");
+            if(Number(r.unreadCount) > 0){
+                const b = document.createElement("div");
+                b.className = "badge";
+                b.textContent = String(r.unreadCount);
+                right.appendChild(b);
+            }
+
+            top.appendChild(left);
+            top.appendChild(right);
+
+            const meta = document.createElement("div");
+            meta.className = "meta";
+            meta.textContent = "last: " + (r.lastMessageAt ? r.lastMessageAt : "-");
+
+            div.appendChild(top);
+            div.appendChild(meta);
+
+            el.appendChild(div);
+        }
+    }
+
+    async function openRoom(roomId){
+        currentRoomId = roomId;
+
+        const header = document.getElementById("chatHeader");
+        header.innerHTML = `
+      <div class="title">Room #${roomId}</div>
+      <div class="sub">myId(표시용)=${getMe()} / 자동 READ: <code>/app/read</code></div>
+    `;
+
+        renderRooms();
+        await loadMessages(roomId);
+        renderMessages(roomId);
+
+        // 방 들어오면 자동 읽음 처리
+        doMarkRead(roomId);
+    }
+
+    async function loadMessages(roomId){
+        const baseUrl = getBaseUrl();
+        const t = tokenOnly();
+        if(!t) return;
+
+        try{
+            const res = await fetch(MESSAGES_URL(baseUrl, roomId), {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
+            if(!res.ok){
+                log("❌ messages fetch failed: " + res.status);
+                log("⬅️ " + text);
+                messagesByRoom[roomId] = [];
+                messageKeySetByRoom[roomId] = new Set();
+                return;
+            }
+
+            const data = JSON.parse(text);
+            const content = safeContentFromResponse(data);
+
+            const list = [];
+            const keySet = new Set();
+
+            for(let i=0;i<content.length;i++){
+                const nm = normalizeMessage(content[i]);
+                if(!keySet.has(nm.key)){
+                    keySet.add(nm.key);
+                    list.push(nm);
+                }
+            }
+
+            list.sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+
+            messagesByRoom[roomId] = list;
+            messageKeySetByRoom[roomId] = keySet;
+
+            log("✅ messages loaded: " + list.length + " (room " + roomId + ")");
+        }catch(e){
+            log("❌ messages fetch error: " + e);
+            messagesByRoom[roomId] = [];
+            messageKeySetByRoom[roomId] = new Set();
+        }
+    }
+
+    function renderMessages(roomId){
+        const el = document.getElementById("messages");
+        el.innerHTML = "";
+
+        const list = messagesByRoom[roomId] || [];
+        const otherLastRead = otherLastReadByRoom[roomId] ?? null;
+        const myId = getMe();
+
+        for(let i=0;i<list.length;i++){
+            const msg = list[i];
+
+            const row = document.createElement("div");
+            row.className = "msgRow" + (msg.senderId === myId ? " me" : "");
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.textContent = msg.content;
+
+            const meta = document.createElement("div");
+            meta.className = "msgMeta";
+
+            const time = document.createElement("span");
+            time.textContent = msg.createdAt ? msg.createdAt : "";
+
+            const read = document.createElement("span");
+            if(msg.senderId === myId){
+                const ok = (msg.id != null && otherLastRead != null && Number(msg.id) <= Number(otherLastRead));
+                read.textContent = ok ? "✓ 읽음" : "";
+            }
+
+            meta.appendChild(time);
+            meta.appendChild(read);
+            bubble.appendChild(meta);
+            row.appendChild(bubble);
+            el.appendChild(row);
+        }
+
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function bumpRoomToTop(roomId){
+        const idx = rooms.findIndex(r => r.roomId === roomId);
+        if(idx === -1) return;
+
+        const target = rooms[idx];
+        rooms.splice(idx, 1);
+        rooms.unshift(target);
+        renderRooms();
+    }
+
+    function addOrUpdateRoom(roomId, bump){
+        let idx = rooms.findIndex(r => r.roomId === roomId);
+        if(idx === -1){
+            rooms.unshift({ roomId: roomId, lastMessageAt: null, unreadCount: 0, otherLastReadMessageId: otherLastReadByRoom[roomId] ?? null });
+            idx = 0;
+        }
+        if(bump) bumpRoomToTop(roomId);
+    }
+
+    function onIncomingChat(payload){
+        const roomId = payload.roomId ?? payload.room_id;
+        if(roomId == null) return;
+
+        addOrUpdateRoom(roomId, true);
+
+        const msg = normalizeMessage(payload);
+
+        if(!messagesByRoom[roomId]){
+            messagesByRoom[roomId] = [];
+            messageKeySetByRoom[roomId] = new Set();
+        }
+
+        const keySet = messageKeySetByRoom[roomId];
+        if(!keySet.has(msg.key)){
+            keySet.add(msg.key);
+            messagesByRoom[roomId].push(msg);
+        }
+
+        if(currentRoomId === roomId){
+            renderMessages(roomId);
+            doMarkRead(roomId);
+        } else {
+            // 상대가 보낸 메시지면 뱃지 증가
+            if(Number(msg.senderId) !== Number(getMe())){
+                const idx = rooms.findIndex(r => r.roomId === roomId);
+                if(idx !== -1) rooms[idx].unreadCount = Number(rooms[idx].unreadCount || 0) + 1;
+            }
+            renderRooms();
+        }
+
+        log("📩 chat recv room=" + roomId + " sender=" + msg.senderId);
+    }
+
+    function onIncomingRead(payload){
+        const roomId = payload.roomId ?? payload.room_id;
+        const lastRead = payload.lastReadMessageId ?? payload.last_read_message_id;
+
+        if(roomId == null) return;
+        otherLastReadByRoom[roomId] = lastRead;
+
+        if(currentRoomId === roomId){
+            renderMessages(roomId);
+        }
+
+        log("👁️ read receipt room=" + roomId + " reader=" + (payload.readerId ?? payload.reader_id) + " last=" + lastRead);
+    }
+
+    function sendMessage(){
+        if(!stompClient || !stompClient.connected){ log("❌ 먼저 CONNECT"); return; }
+        if(!currentRoomId){ log("❌ 방 먼저 선택"); return; }
+
+        const content = document.getElementById("content").value.trim();
+        if(!content){ log("❌ content 입력"); return; }
+
+        // ✅ senderId를 보내지 않는다 (서버가 Principal로 senderId 결정)
+        const payload = { roomId: Number(currentRoomId), content: content };
+        stompClient.send("/app/message", {}, JSON.stringify(payload));
+
+        document.getElementById("content").value = "";
+        log("➡️ sent: " + JSON.stringify(payload));
+    }
+
+    function markRead(){
+        if(!currentRoomId){ log("❌ 방 먼저 선택"); return; }
+        doMarkRead(currentRoomId);
+    }
+
+    function doMarkRead(roomId){
+        if(!stompClient || !stompClient.connected) return;
+
+        // ✅ userId를 보내지 않는다 (서버가 Principal로 userId 결정)
+        const payload = { roomId: Number(roomId) };
+        stompClient.send("/app/read", {}, JSON.stringify(payload));
+
+        // UI상 즉시 0 처리
+        const idx = rooms.findIndex(r => r.roomId === roomId);
+        if(idx !== -1){
+            rooms[idx].unreadCount = 0;
+            renderRooms();
+        }
+        log("👁️ markRead sent: " + JSON.stringify(payload));
+    }
+</script>
+</body>
+</html>

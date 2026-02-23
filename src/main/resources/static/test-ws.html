@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>Chat WS Test (SockJS + STOMP)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; margin: 18px; }
+        h2 { margin-top: 0; }
+        .grid { display: grid; grid-template-columns: 240px 1fr; gap: 10px; max-width: 980px; }
+        .box { border: 1px solid #ddd; padding: 12px; border-radius: 8px; }
+        label { display: block; font-size: 13px; margin-top: 8px; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { margin-top: 10px; margin-right: 6px; padding: 8px 10px; }
+        pre { background: #f6f6f6; padding: 10px; height: 360px; overflow: auto; border-radius: 6px; }
+        .row { margin-top: 6px; }
+        .hint { color: #666; font-size: 12px; margin-top: 6px; }
+    </style>
+</head>
+
+<body>
+<h2>Chat WebSocket Test</h2>
+
+<div class="grid">
+
+    <!-- LEFT: Controls -->
+    <div class="box">
+        <div class="row">
+            <label>WS Endpoint (SockJS)</label>
+            <input id="wsEndpoint" value="/ws" />
+            <div class="hint">서버에서 <code>addEndpoint("/ws").withSockJS()</code>라면 그대로 /ws</div>
+        </div>
+
+        <div class="row">
+            <label>roomId</label>
+            <input id="roomId" value="1" />
+        </div>
+
+        <div class="row">
+            <label>userId (CONNECT 헤더 userId, = Principal name 임시)</label>
+            <input id="userId" value="2" />
+            <div class="hint">브라우저 탭을 2개 열어서 userId를 1/2로 바꿔 테스트하면 됨</div>
+        </div>
+
+        <div class="row">
+            <label>content</label>
+            <input id="content" placeholder="message..." />
+        </div>
+
+        <div class="row">
+            <button onclick="connect()">CONNECT</button>
+            <button onclick="disconnect()">DISCONNECT</button>
+        </div>
+
+        <div class="row">
+            <button onclick="subscribeChat()">SUBSCRIBE CHAT<br><small>(/user/queue/chat)</small></button>
+            <button onclick="subscribeRead()">SUBSCRIBE READ<br><small>(/user/queue/read)</small></button>
+        </div>
+
+        <div class="row">
+            <button onclick="sendMessage()">SEND MESSAGE<br><small>(/app/message)</small></button>
+            <button onclick="markRead()">MARK READ<br><small>(/app/read)</small></button>
+        </div>
+
+        <div class="hint">
+            ✅ 테스트 순서 추천<br>
+            1) 탭A userId=1 CONNECT + SUBSCRIBE CHAT/READ<br>
+            2) 탭B userId=2 CONNECT + SUBSCRIBE CHAT/READ<br>
+            3) 탭B에서 SEND → 탭A에 메시지 수신<br>
+            4) 탭A에서 MARK READ → 탭B에 READ receipt 수신
+        </div>
+    </div>
+
+    <!-- RIGHT: Log -->
+    <div class="box">
+        <div class="row">
+            <button onclick="clearLog()">CLEAR LOG</button>
+        </div>
+        <pre id="log"></pre>
+    </div>
+
+</div>
+
+<script>
+    let stompClient = null;
+    let chatSubscription = null;
+    let readSubscription = null;
+
+    function log(msg) {
+        const el = document.getElementById("log");
+        el.textContent += msg + "\n";
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function clearLog() {
+        document.getElementById("log").textContent = "";
+    }
+
+    function getVal(id) {
+        return document.getElementById(id).value.trim();
+    }
+
+    function connect() {
+        const endpoint = getVal("wsEndpoint");
+        const userId = getVal("userId");
+
+        if (!endpoint) {
+            log("❌ wsEndpoint를 입력해줘");
+            return;
+        }
+        if (!userId) {
+            log("❌ userId를 입력해줘");
+            return;
+        }
+
+        const socket = new SockJS(endpoint);
+        stompClient = Stomp.over(socket);
+
+        // debug 로그가 너무 많으면 아래 줄 주석 처리
+        stompClient.debug = (str) => console.log(str);
+
+        const headers = { userId: userId };
+
+        stompClient.connect(
+            headers,
+            (frame) => log("✅ CONNECTED: " + frame),
+            (err) => log("❌ CONNECT ERROR: " + err)
+        );
+    }
+
+    function disconnect() {
+        if (chatSubscription) {
+            chatSubscription.unsubscribe();
+            chatSubscription = null;
+        }
+        if (readSubscription) {
+            readSubscription.unsubscribe();
+            readSubscription = null;
+        }
+
+        if (stompClient && stompClient.connected) {
+            stompClient.disconnect(() => log("✅ DISCONNECTED"));
+        } else {
+            log("ℹ️ 이미 disconnected 상태");
+        }
+    }
+
+    function subscribeChat() {
+        if (!stompClient || !stompClient.connected) {
+            log("❌ 먼저 CONNECT 해줘");
+            return;
+        }
+        if (chatSubscription) {
+            log("ℹ️ 이미 CHAT 구독 중");
+            return;
+        }
+
+        chatSubscription = stompClient.subscribe("/user/queue/chat", (message) => {
+            log("📩 CHAT RECV: " + message.body);
+        });
+
+        log("✅ SUBSCRIBED: /user/queue/chat");
+    }
+
+    function subscribeRead() {
+        if (!stompClient || !stompClient.connected) {
+            log("❌ 먼저 CONNECT 해줘");
+            return;
+        }
+        if (readSubscription) {
+            log("ℹ️ 이미 READ 구독 중");
+            return;
+        }
+
+        readSubscription = stompClient.subscribe("/user/queue/read", (message) => {
+            log("👁️ READ RECEIPT RECV: " + message.body);
+        });
+
+        log("✅ SUBSCRIBED: /user/queue/read");
+    }
+
+    function sendMessage() {
+        if (!stompClient || !stompClient.connected) {
+            log("❌ 먼저 CONNECT 해줘");
+            return;
+        }
+
+        const roomIdStr = getVal("roomId");
+        const userIdStr = getVal("userId");
+        const content = getVal("content");
+
+        const roomId = Number(roomIdStr);
+        const senderId = Number(userIdStr);
+
+        if (!roomId || !senderId || !content) {
+            log("❌ roomId, userId, content를 모두 입력해줘");
+            return;
+        }
+
+        const payload = { roomId: roomId, senderId: senderId, content: content };
+
+        stompClient.send("/app/message", {}, JSON.stringify(payload));
+        log("➡️ SENT /app/message: " + JSON.stringify(payload));
+    }
+
+    function markRead() {
+        if (!stompClient || !stompClient.connected) {
+            log("❌ 먼저 CONNECT 해줘");
+            return;
+        }
+
+        const roomIdStr = getVal("roomId");
+        const userIdStr = getVal("userId");
+
+        const roomId = Number(roomIdStr);
+        const userId = Number(userIdStr);
+
+        if (!roomId || !userId) {
+            log("❌ roomId, userId를 입력해줘");
+            return;
+        }
+
+        // 서버 @MessageMapping("/read") + DTO {roomId, userId}
+        const payload = { roomId: roomId, userId: userId };
+
+        stompClient.send("/app/read", {}, JSON.stringify(payload));
+        log("👁️ SENT /app/read: " + JSON.stringify(payload));
+    }
+</script>
+
+</body>
+</html>

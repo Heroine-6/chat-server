@@ -1,0 +1,16 @@
+package com.example.chatserver.domain.chatMessage.dto.response;
+
+import com.example.chatserver.common.entity.ChatRoom;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
+public class SendFirstMessageResponse {
+
+    private Long roomId;
+
+    public static SendFirstMessageResponse from(ChatRoom chatRoom) {
+        return new SendFirstMessageResponse(chatRoom.getId());
+    }
+}
